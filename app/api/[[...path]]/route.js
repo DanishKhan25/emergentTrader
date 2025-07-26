@@ -30,7 +30,9 @@ async function callPythonAPI(endpoint, method = 'GET', params = {}) {
   return new Promise((resolve, reject) => {
     const pythonScript = `
 import sys
+import os
 sys.path.append('/app/python_backend')
+os.chdir('/app/python_backend')
 from api_handler import handle_api_request
 import json
 
@@ -41,7 +43,7 @@ except Exception as e:
     print(json.dumps({"success": False, "error": str(e)}))
 `
     
-    const pythonProcess = spawn('python3', ['-c', pythonScript])
+    const pythonProcess = spawn('python3', ['-c', pythonScript], { cwd: '/app/python_backend' })
     let output = ''
     let error = ''
     
