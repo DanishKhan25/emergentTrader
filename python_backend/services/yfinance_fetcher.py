@@ -15,6 +15,15 @@ import logging
 from typing import Dict, List, Optional, Tuple
 import requests
 
+# Import caching functionality
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from core.data_cache import (
+    get_cached_stock_data, set_cached_stock_data,
+    get_cached_stock_info, set_cached_stock_info,
+    cache
+)
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -84,7 +93,7 @@ class YFinanceFetcher:
     @rate_limit(delay_range=(0.5, 2), max_retries=3)
     def get_nse_stock_data(self, symbol: str, period: str = "2y", interval: str = "1d") -> pd.DataFrame:
         """
-        Fetch stock data for NSE listed stocks with rate limiting
+        Fetch stock data for NSE listed stocks with rate limiting and caching
         
         Args:
             symbol: Stock symbol (will add .NS suffix)
@@ -95,6 +104,12 @@ class YFinanceFetcher:
             DataFrame with OHLCV data
         """
         try:
+            # Check cache first
+            cached_data = get_cached_stock_data(symbol, period)
+            if cached_data is not None and not cached_data.empty:
+                logger.debug(f"Using cached data for {symbol}")
+                return cached_data
+            
             # Add NSE suffix if not present
             if not symbol.endswith(self.nse_suffix):
                 symbol += self.nse_suffix
@@ -112,6 +127,10 @@ class YFinanceFetcher:
             data.reset_index(inplace=True)
             data['symbol'] = symbol.replace(self.nse_suffix, "")
             
+            # Cache the data
+            clean_symbol = symbol.replace(self.nse_suffix, "")
+            set_cached_stock_data(clean_symbol, period, data)
+            logger.debug(f"Cached data for {clean_symbol}")
             
             return data
             
@@ -154,17 +173,34 @@ class YFinanceFetcher:
             return pd.DataFrame()
     
     @rate_limit(delay_range=(1, 3), max_retries=3)
-    def get_stock_info(self, symbol: str) -> Dict:
+    def get_stock_info(self, symbol) -> Dict:
         """
-        Get fundamental information about a stock with rate limiting
+        Get fundamental information about a stock with rate limiting and caching
         
         Args:
-            symbol: Stock symbol
+            symbol: Stock symbol (string) or stock dictionary
         
         Returns:
             Dictionary with stock information
         """
         try:
+            # Handle case where symbol might be a dictionary
+            if isinstance(symbol, dict):
+                symbol = symbol.get('symbol', '')
+            
+            # Ensure symbol is a string
+            symbol = str(symbol)
+            
+            if not symbol:
+                logger.error("Empty symbol provided to get_stock_info")
+                return {}
+            
+            # Check cache first
+            cached_info = get_cached_stock_info(symbol)
+            if cached_info is not None:
+                logger.debug(f"Using cached info for {symbol}")
+                return cached_info
+            
             if not symbol.endswith(self.nse_suffix):
                 symbol += self.nse_suffix
             
@@ -207,14 +243,20 @@ class YFinanceFetcher:
                 'last_updated': datetime.now().isoformat()
             }
             
+            # Cache the data
+            clean_symbol = symbol.replace(self.nse_suffix, "")
+            set_cached_stock_info(clean_symbol, fundamental_data)
+            logger.debug(f"Cached info for {clean_symbol}")
+            
             logger.debug(f"Successfully fetched info for {symbol}")
             return fundamental_data
             
         except Exception as e:
             logger.error(f"Error fetching stock info for {symbol}: {str(e)}")
             # Return default structure to prevent downstream errors
+            clean_symbol = symbol.replace(self.nse_suffix, "") if isinstance(symbol, str) and symbol.endswith(self.nse_suffix) else str(symbol)
             return {
-                'symbol': symbol.replace(self.nse_suffix, "") if symbol.endswith(self.nse_suffix) else symbol,
+                'symbol': clean_symbol,
                 'company_name': '',
                 'sector': 'Unknown',
                 'industry': 'Unknown',
@@ -233,16 +275,21 @@ class YFinanceFetcher:
                 'last_updated': datetime.now().isoformat(),
                 'error': str(e)
             }
-            return {}
 
     def get_nse_universe(self) -> List[Dict]:
         """
-        Get list of actively traded NSE equity stocks for screening.
+        Get list of actively traded NSE equity stocks for screening with caching.
 
         Returns:
             List of stock dictionaries with symbol and basic info
         """
         try:
+            # Check cache first
+            cached_universe = cache.get('nse_universe', 'stocks_list')
+            if cached_universe is not None:
+                logger.info(f"Using cached NSE universe with {len(cached_universe)} stocks")
+                return cached_universe
+            
             # Try to load from local cache first
             cache_file = "python_backend/data/nse_raw.csv"
             if os.path.exists(cache_file):
@@ -256,7 +303,9 @@ class YFinanceFetcher:
                 if response.status_code != 200:
                     logger.error(f"Failed to download NSE data: HTTP {response.status_code}")
                     # Return fallback list
-                    return self._get_fallback_nse_universe()
+                    fallback_universe = self._get_fallback_nse_universe()
+                    cache.set('nse_universe', 'stocks_list', fallback_universe)
+                    return fallback_universe
 
                 os.makedirs("python_backend/data", exist_ok=True)
                 with open(cache_file, "wb") as f:
@@ -269,7 +318,9 @@ class YFinanceFetcher:
 
             if symbol_col not in df.columns:
                 logger.error(f"Column '{symbol_col}' not found in NSE data")
-                return self._get_fallback_nse_universe()
+                fallback_universe = self._get_fallback_nse_universe()
+                cache.set('nse_universe', 'stocks_list', fallback_universe)
+                return fallback_universe
 
             # Filter only EQ series (equity stocks)
             df_eq = df[df[series_col] == 'EQ']
@@ -288,12 +339,16 @@ class YFinanceFetcher:
                     'face_value': row.get('FACE VALUE', 0)
                 })
 
-            logger.info(f"Loaded {len(nse_stocks)} NSE stocks from universe")
+            # Cache the universe
+            cache.set('nse_universe', 'stocks_list', nse_stocks)
+            logger.info(f"Loaded and cached {len(nse_stocks)} NSE stocks from universe")
             return nse_stocks
             
         except Exception as e:
             logger.error(f"Error loading NSE universe: {str(e)}")
-            return self._get_fallback_nse_universe()
+            fallback_universe = self._get_fallback_nse_universe()
+            cache.set('nse_universe', 'stocks_list', fallback_universe)
+            return fallback_universe
     
     def _get_fallback_nse_universe(self) -> List[Dict]:
         """Fallback NSE universe with major stocks"""
@@ -317,12 +372,12 @@ class YFinanceFetcher:
         logger.info(f"Using fallback NSE universe with {len(fallback_stocks)} stocks")
         return fallback_stocks
     
-    def get_multiple_stock_info(self, symbols: List[str], batch_size: int = 5) -> Dict[str, Dict]:
+    def get_multiple_stock_info(self, symbols: List, batch_size: int = 5) -> Dict[str, Dict]:
         """
         Get stock info for multiple symbols with batch processing and rate limiting
         
         Args:
-            symbols: List of stock symbols
+            symbols: List of stock symbols (strings) or stock dictionaries
             batch_size: Number of stocks to process in each batch
             
         Returns:
@@ -340,8 +395,17 @@ class YFinanceFetcher:
             
             logger.info(f"Processing batch {batch_num}/{total_batches}: {batch}")
             
-            for symbol in batch:
+            for symbol_input in batch:
                 try:
+                    # Extract symbol string from input
+                    if isinstance(symbol_input, dict):
+                        symbol = symbol_input.get('symbol', '')
+                    else:
+                        symbol = str(symbol_input)
+                    
+                    if not symbol:
+                        continue
+                    
                     info = self.get_stock_info(symbol)
                     stock_info[symbol] = info
                     
@@ -349,8 +413,9 @@ class YFinanceFetcher:
                     time.sleep(random.uniform(0.2, 0.5))
                     
                 except Exception as e:
-                    logger.error(f"Error fetching info for {symbol}: {str(e)}")
-                    stock_info[symbol] = {'error': str(e)}
+                    symbol_str = str(symbol_input) if not isinstance(symbol_input, dict) else symbol_input.get('symbol', 'unknown')
+                    logger.error(f"Error fetching info for {symbol_str}: {str(e)}")
+                    stock_info[symbol_str] = {'error': str(e)}
             
             # Longer delay between batches
             if i + batch_size < total_symbols:
@@ -361,12 +426,12 @@ class YFinanceFetcher:
         logger.info(f"Successfully fetched info for {len([k for k, v in stock_info.items() if 'error' not in v])}/{total_symbols} stocks")
         return stock_info
     
-    def get_multiple_stock_data(self, symbols: List[str], period: str = "1y", batch_size: int = 10) -> Dict[str, pd.DataFrame]:
+    def get_multiple_stock_data(self, symbols: List, period: str = "1y", batch_size: int = 10) -> Dict[str, pd.DataFrame]:
         """
         Get historical data for multiple symbols with batch processing
         
         Args:
-            symbols: List of stock symbols
+            symbols: List of stock symbols (strings) or stock dictionaries
             period: Data period
             batch_size: Number of stocks to process in each batch
             
@@ -385,8 +450,17 @@ class YFinanceFetcher:
             
             logger.info(f"Processing data batch {batch_num}/{total_batches}")
             
-            for symbol in batch:
+            for symbol_input in batch:
                 try:
+                    # Extract symbol string from input
+                    if isinstance(symbol_input, dict):
+                        symbol = symbol_input.get('symbol', '')
+                    else:
+                        symbol = str(symbol_input)
+                    
+                    if not symbol:
+                        continue
+                    
                     data = self.get_nse_stock_data(symbol, period=period)
                     if not data.empty:
                         stock_data[symbol] = data
@@ -395,7 +469,8 @@ class YFinanceFetcher:
                     time.sleep(random.uniform(0.1, 0.3))
                     
                 except Exception as e:
-                    logger.error(f"Error fetching data for {symbol}: {str(e)}")
+                    symbol_str = str(symbol_input) if not isinstance(symbol_input, dict) else symbol_input.get('symbol', 'unknown')
+                    logger.error(f"Error fetching data for {symbol_str}: {str(e)}")
             
             # Delay between batches
             if i + batch_size < total_symbols:

@@ -239,12 +239,12 @@ class ShariahFilter:
             logger.error(f"Error calculating compliance score: {str(e)}")
             return 0.0
     
-    def get_shariah_universe(self, stock_universe: List[str], stock_fetcher) -> List[Dict]:
+    def get_shariah_universe(self, stock_universe: List[Dict], stock_fetcher) -> List[Dict]:
         """
         Filter a universe of stocks for Shariah compliance
         
         Args:
-            stock_universe: List of stock symbols to check
+            stock_universe: List of stock dictionaries from NSE universe
             stock_fetcher: YFinanceFetcher instance to get stock data
             
         Returns:
@@ -252,8 +252,18 @@ class ShariahFilter:
         """
         compliant_stocks = []
         
-        for symbol in stock_universe:
+        for stock_dict in stock_universe:
             try:
+                # Extract symbol from stock dictionary
+                if isinstance(stock_dict, dict):
+                    symbol = stock_dict.get('symbol', '')
+                else:
+                    # Handle case where it might be a string (backward compatibility)
+                    symbol = str(stock_dict)
+                
+                if not symbol:
+                    continue
+                
                 # Get stock information
                 stock_info = stock_fetcher.get_stock_info(symbol)
                 
@@ -276,7 +286,7 @@ class ShariahFilter:
                 logger.info(f"Processed {symbol}: {'Compliant' if compliance_result['shariah_compliant'] else 'Not Compliant'}")
                 
             except Exception as e:
-                logger.error(f"Error processing {symbol}: {str(e)}")
+                logger.error(f"Error processing {stock_dict}: {str(e)}")
                 continue
         
         # Sort by compliance score and market cap

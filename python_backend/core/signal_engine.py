@@ -51,6 +51,15 @@ class SignalEngine:
         
         self.backtest_engine = BacktestEngine()
         
+        # Initialize optimized signal generator
+        try:
+            from .optimized_signal_generator import OptimizedSignalGenerator
+            self.optimized_generator = OptimizedSignalGenerator(self.data_fetcher)
+            logger.info("Optimized signal generator initialized")
+        except Exception as e:
+            logger.warning(f"Could not initialize optimized signal generator: {str(e)}")
+            self.optimized_generator = None
+        
         # Signal storage
         self.active_signals = []
         self.signal_history = []
@@ -93,6 +102,66 @@ class SignalEngine:
     
     def generate_signals(self, symbols: Optional[List[str]] = None, strategy_name: str = 'momentum', 
                         shariah_only: bool = True, min_confidence: float = 0.6) -> List[Dict]:
+        """
+        Generate trading signals using optimized signal generator (preferred) or fallback to original
+        
+        Args:
+            symbols: List of stock symbols to analyze
+            strategy_name: Name of the trading strategy to use
+            shariah_only: Whether to filter for Shariah compliant stocks only
+            min_confidence: Minimum confidence threshold for signals
+            
+        Returns:
+            List of trading signals
+        """
+        try:
+            # Use optimized generator if available and strategy is supported
+            if (self.optimized_generator and 
+                strategy_name in ['momentum', 'mean_reversion', 'breakout', 'value_investing']):
+                
+                logger.info(f"Using optimized signal generator for {strategy_name}")
+                
+                if symbols is None:
+                    if shariah_only:
+                        symbols = self.get_shariah_universe()
+                    else:
+                        # Get full NSE universe
+                        nse_stocks = self.data_fetcher.get_nse_universe()
+                        symbols = [stock['symbol'] for stock in nse_stocks]
+                
+                # Limit symbols for performance
+                max_symbols = 50 if strategy_name == 'momentum' else 30
+                symbols = symbols[:max_symbols]
+                
+                signals = self.optimized_generator.generate_optimized_signals(
+                    strategy_name=strategy_name,
+                    symbols=symbols,
+                    min_confidence=min_confidence,
+                    max_symbols=max_symbols
+                )
+                
+                # Store signals
+                for signal in signals:
+                    signal['id'] = str(uuid.uuid4())
+                    signal['generated_at'] = datetime.now().isoformat()
+                    self.active_signals.append(signal)
+                    self.signal_history.append(signal)
+                
+                logger.info(f"Generated {len(signals)} optimized {strategy_name} signals")
+                return signals
+            
+            # Fallback to original signal generation
+            else:
+                logger.info(f"Using original signal generator for {strategy_name}")
+                return self._generate_signals_original(symbols, strategy_name, shariah_only, min_confidence)
+                
+        except Exception as e:
+            logger.error(f"Error generating signals: {str(e)}")
+            # Fallback to original method
+            return self._generate_signals_original(symbols, strategy_name, shariah_only, min_confidence)
+    
+    def _generate_signals_original(self, symbols: Optional[List[str]] = None, strategy_name: str = 'momentum', 
+                                 shariah_only: bool = True, min_confidence: float = 0.6) -> List[Dict]:
         """
         Generate trading signals for given symbols using specified strategy
         

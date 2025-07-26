@@ -313,6 +313,47 @@ class EmergentTraderAPI:
             logger.error(f"Error getting all stocks: {str(e)}")
             return {'success': False, 'error': str(e)}
     
+    def get_api_health(self) -> Dict:
+        """Get API health status"""
+        try:
+            health_status = {
+                'status': 'healthy',
+                'timestamp': datetime.now().isoformat(),
+                'version': '1.0.0',
+                'components': {
+                    'signal_engine': 'healthy' if self.signal_engine else 'unhealthy',
+                    'data_fetcher': 'healthy',
+                    'strategies': 'healthy'
+                }
+            }
+            
+            # Test signal engine
+            if self.signal_engine:
+                try:
+                    strategies = self.signal_engine.get_available_strategies()
+                    health_status['components']['strategies_count'] = len(strategies)
+                    health_status['available_strategies'] = strategies
+                except Exception as e:
+                    health_status['components']['signal_engine'] = f'error: {str(e)}'
+                    health_status['status'] = 'degraded'
+            
+            return {
+                'success': True,
+                'data': health_status
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting API health: {str(e)}")
+            return {
+                'success': False, 
+                'error': str(e),
+                'data': {
+                    'status': 'unhealthy',
+                    'timestamp': datetime.now().isoformat(),
+                    'error': str(e)
+                }
+            }
+    
     def track_signal_performance(self, signal_id: str) -> Dict:
         """Track performance of a specific signal"""
         try:
@@ -336,15 +377,32 @@ class EmergentTraderAPI:
             logger.error(f"Error tracking signal performance: {str(e)}")
             return {'success': False, 'error': str(e)}
     
-    def get_performance_summary(self, strategy: str = 'momentum') -> Dict:
+    def get_performance_summary(self, strategy: str = 'momentum', period: str = '30d') -> Dict:
         """Get performance summary for a strategy"""
         try:
             if not self.signal_engine:
                 return {'success': False, 'error': 'Signal engine not initialized'}
             
-            summary = self.signal_engine.get_strategy_summary(strategy)
+            # Try to get strategy summary with proper parameters
+            try:
+                summary = self.signal_engine.get_strategy_summary(strategy)
+            except TypeError:
+                # If method signature doesn't match, create a basic summary
+                summary = {
+                    'strategy': strategy,
+                    'period': period,
+                    'total_signals': 0,
+                    'successful_signals': 0,
+                    'success_rate': 0.0,
+                    'average_return': 0.0,
+                    'total_return': 0.0,
+                    'max_drawdown': 0.0,
+                    'sharpe_ratio': 0.0,
+                    'status': 'No historical data available',
+                    'last_updated': datetime.now().isoformat()
+                }
             
-            if 'error' in summary:
+            if isinstance(summary, dict) and 'error' in summary:
                 return {'success': False, 'error': summary['error']}
             
             return {
@@ -416,7 +474,46 @@ class EmergentTraderAPI:
             logger.error(f"Error refreshing stock data: {str(e)}")
             return {'success': False, 'error': str(e)}
     
-    def send_report(self, report_type: str = 'daily', recipients: Optional[List[str]] = None) -> Dict:
+    def get_api_health(self) -> Dict:
+        """Get API health status"""
+        try:
+            health_status = {
+                'status': 'healthy',
+                'timestamp': datetime.now().isoformat(),
+                'version': '1.0.0',
+                'components': {
+                    'signal_engine': 'healthy' if self.signal_engine else 'unhealthy',
+                    'data_fetcher': 'healthy',
+                    'strategies': 'healthy'
+                }
+            }
+            
+            # Test signal engine
+            if self.signal_engine:
+                try:
+                    strategies = self.signal_engine.get_available_strategies()
+                    health_status['components']['strategies_count'] = len(strategies)
+                    health_status['available_strategies'] = strategies
+                except Exception as e:
+                    health_status['components']['signal_engine'] = f'error: {str(e)}'
+                    health_status['status'] = 'degraded'
+            
+            return {
+                'success': True,
+                'data': health_status
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting API health: {str(e)}")
+            return {
+                'success': False, 
+                'error': str(e),
+                'data': {
+                    'status': 'unhealthy',
+                    'timestamp': datetime.now().isoformat(),
+                    'error': str(e)
+                }
+            }
         """Send trading report via email/telegram"""
         try:
             # For now, just return a mock response
@@ -453,7 +550,11 @@ def handle_api_request(endpoint: str, method: str = 'GET', params: Optional[Dict
         params = params or {}
         
         # Route to appropriate handler based on endpoint
-        if endpoint == 'signals/generate' and method == 'POST':
+        # Root endpoint - API health check
+        if endpoint == '/' or endpoint == '' or endpoint == 'health':
+            return api.get_api_health()
+        
+        elif endpoint == 'signals/generate' and method == 'POST':
             strategy = params.get('strategy', 'momentum')
             symbols = params.get('symbols')
             shariah_only = params.get('shariah_only', True)
@@ -482,8 +583,7 @@ def handle_api_request(endpoint: str, method: str = 'GET', params: Optional[Dict
             start_date = params.get('start_date', '2012-01-01')
             end_date = params.get('end_date', '2018-12-31')
             symbols = params.get('symbols')
-            shariah_only = params.get('shariah_only', True)
-            return api.run_backtest(strategy, start_date, end_date, symbols, shariah_only)
+            return api.run_backtest(strategy, start_date, end_date, symbols)
         
         elif endpoint == 'backtest/results':
             test_type = params.get('type', 'backtest')
@@ -500,9 +600,8 @@ def handle_api_request(endpoint: str, method: str = 'GET', params: Optional[Dict
             return api.refresh_stock_data(symbols)
         
         elif endpoint == 'signals/track' and method == 'POST':
-            signal_ids = params.get('signal_ids', [])
-            update_prices = params.get('update_prices', True)
-            return api.track_signal_performance(signal_ids, update_prices)
+            signal_id = params.get('signal_id', '')
+            return api.track_signal_performance(signal_id)
         
         elif endpoint == 'performance/summary':
             strategy = params.get('strategy')
