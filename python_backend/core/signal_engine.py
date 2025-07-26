@@ -20,6 +20,12 @@ from core.strategies.momentum_strategy import MomentumStrategy
 from core.strategies.mean_reversion_strategy import MeanReversionStrategy
 from core.strategies.breakout_strategy import BreakoutStrategy
 from core.strategies.value_investing_strategy import ValueInvestingStrategy
+from core.strategies.swing_trading_strategy import SwingTradingStrategy
+from core.strategies.multibagger_strategy import MultibaggerStrategy
+from core.strategies.fundamental_growth_strategy import FundamentalGrowthStrategy
+from core.strategies.sector_rotation_strategy import SectorRotationStrategy
+from core.strategies.low_volatility_strategy import LowVolatilityStrategy
+from core.strategies.pivot_cpr_strategy import PivotCPRStrategy
 from core.backtest_engine import BacktestEngine
 
 logger = logging.getLogger(__name__)
@@ -29,12 +35,18 @@ class SignalEngine:
         self.data_fetcher = YFinanceFetcher()
         self.shariah_filter = ShariahFilter()
         
-        # Initialize all available strategies
+        # Initialize all 10 trading strategies
         self.strategies = {
             'momentum': MomentumStrategy(),
             'mean_reversion': MeanReversionStrategy(),
             'breakout': BreakoutStrategy(),
-            'value_investing': ValueInvestingStrategy()
+            'value_investing': ValueInvestingStrategy(),
+            'swing_trading': SwingTradingStrategy(),
+            'multibagger': MultibaggerStrategy(),
+            'fundamental_growth': FundamentalGrowthStrategy(),
+            'sector_rotation': SectorRotationStrategy(),
+            'low_volatility': LowVolatilityStrategy(),
+            'pivot_cpr': PivotCPRStrategy()
         }
         
         self.backtest_engine = BacktestEngine()
