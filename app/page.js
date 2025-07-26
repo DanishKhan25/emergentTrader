@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { TrendingUp, TrendingDown, Activity, BarChart3, Settings, RefreshCw, DollarSign, Users } from 'lucide-react'
+import { TrendingUp, TrendingDown, Activity, BarChart3, Settings, RefreshCw, DollarSign, Users, BookOpen } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts'
 
 export default function EmergentTraderDashboard() {
@@ -149,6 +149,14 @@ export default function EmergentTraderDashboard() {
             </div>
             
             <div className="flex items-center space-x-2">
+              <Button 
+                variant="outline" 
+                onClick={() => window.open('/docs', '_blank')}
+                className="hidden sm:flex"
+              >
+                <BookOpen className="h-4 w-4 mr-2" />
+                API Docs
+              </Button>
               <Button variant="outline" onClick={fetchTodaysSignals} disabled={loading}>
                 <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 Refresh

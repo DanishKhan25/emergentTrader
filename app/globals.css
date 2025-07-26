@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import Swagger UI CSS */
+@import 'swagger-ui-react/swagger-ui.css';
+
 body {
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
@@ -138,4 +141,71 @@ code {
   body {
     @apply bg-background text-foreground;
     }
+}
+
+/* Custom Swagger UI Styles */
+.swagger-ui .topbar {
+  display: none !important;
+}
+
+.swagger-ui {
+  font-family: inherit;
+}
+
+.swagger-ui .info {
+  margin: 20px 0;
+}
+
+.swagger-ui .scheme-container {
+  background: #f8fafc;
+  padding: 15px;
+  border-radius: 8px;
+  margin: 20px 0;
+  border: 1px solid #e2e8f0;
+}
+
+.swagger-ui .opblock.opblock-get {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.swagger-ui .opblock.opblock-post {
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.05);
+}
+
+.swagger-ui .opblock.opblock-put {
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.05);
+}
+
+.swagger-ui .opblock.opblock-delete {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.swagger-ui .btn.authorize {
+  background-color: #4f46e5;
+  border-color: #4f46e5;
+}
+
+.swagger-ui .btn.authorize:hover {
+  background-color: #4338ca;
+  border-color: #4338ca;
+}
+
+.swagger-ui .opblock-summary {
+  padding: 10px 20px;
+}
+
+.swagger-ui .opblock-description-wrapper {
+  padding: 15px 20px;
+}
+
+.swagger-ui .parameters-container {
+  padding: 20px;
+}
+
+.swagger-ui .responses-wrapper {
+  padding: 20px;
 }
