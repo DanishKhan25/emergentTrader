@@ -7,7 +7,12 @@
         "dev:no-reload": "next dev --hostname 0.0.0.0 --port 3000",
         "dev:webpack": "next dev --hostname 0.0.0.0 --port 3000",
         "build": "next build",
-        "start": "next start"
+        "start": "next start",
+        "db:setup": "node scripts/setup-database.js",
+        "db:status": "node scripts/db-manager.js status",
+        "db:cleanup": "node scripts/db-manager.js cleanup",
+        "db:export": "node scripts/db-manager.js export",
+        "db:reset": "node scripts/db-manager.js reset"
     },
     "dependencies": {
         "@hookform/resolvers": "^5.1.1",
@@ -45,6 +50,7 @@
         "clsx": "^2.1.1",
         "cmdk": "^1.1.1",
         "date-fns": "^4.1.0",
+        "dotenv": "^17.2.1",
         "embla-carousel-react": "^8.6.0",
         "input-otp": "^1.4.2",
         "lucide-react": "^0.516.0",
