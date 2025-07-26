@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Dict, List, Optional
 
 # Test configuration
-BASE_URL = "https://afba78ca-1963-477d-9d64-3fe9184a54aa.preview.emergentagent.com/api"
+BASE_URL = "http://localhost:3000/api"
 TIMEOUT = 30  # seconds
 
 class EmergentTraderAPITester:
