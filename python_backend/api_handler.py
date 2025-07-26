@@ -224,6 +224,9 @@ class EmergentTraderAPI:
             if not self.signal_engine:
                 return {'success': False, 'error': 'Signal engine not initialized'}
             
+            if not signal_id or signal_id.strip() == '':
+                return {'success': False, 'error': 'signal_id is required and cannot be empty'}
+            
             performance = self.signal_engine.get_signal_performance(signal_id)
             
             if 'error' in performance:
@@ -256,6 +259,66 @@ class EmergentTraderAPI:
             
         except Exception as e:
             logger.error(f"Error getting performance summary: {str(e)}")
+            return {'success': False, 'error': str(e)}
+    
+    def refresh_stock_data(self, symbols: Optional[List[str]] = None) -> Dict:
+        """
+        Refresh stock data for given symbols or all tracked symbols
+        
+        Args:
+            symbols: Optional list of symbols to refresh
+            
+        Returns:
+            API response with refresh status
+        """
+        try:
+            if not self.signal_engine:
+                return {'success': False, 'error': 'Signal engine not initialized'}
+            
+            if symbols is None:
+                # Get all symbols from Shariah universe
+                symbols = self.signal_engine.get_shariah_universe()[:50]  # Limit for performance
+            
+            refreshed_data = []
+            failed_symbols = []
+            
+            for symbol in symbols:
+                try:
+                    # Fetch fresh data
+                    stock_data = self.signal_engine.data_fetcher.get_nse_stock_data(symbol, period="1mo")
+                    
+                    if not stock_data.empty:
+                        # Get latest price info
+                        latest_price = stock_data.iloc[-1]['close']
+                        latest_date = stock_data.iloc[-1]['date'].isoformat() if 'date' in stock_data.columns else ''
+                        
+                        refreshed_data.append({
+                            'symbol': symbol,
+                            'latest_price': latest_price,
+                            'latest_date': latest_date,
+                            'data_points': len(stock_data),
+                            'status': 'success'
+                        })
+                    else:
+                        failed_symbols.append(symbol)
+                        
+                except Exception as e:
+                    logger.error(f"Error refreshing {symbol}: {str(e)}")
+                    failed_symbols.append(symbol)
+            
+            return {
+                'success': True,
+                'data': {
+                    'refreshed_stocks': refreshed_data,
+                    'successful_count': len(refreshed_data),
+                    'failed_symbols': failed_symbols,
+                    'failed_count': len(failed_symbols),
+                    'refreshed_at': datetime.now().isoformat()
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Error refreshing stock data: {str(e)}")
             return {'success': False, 'error': str(e)}
     
     def send_report(self, report_type: str = 'daily', recipients: Optional[List[str]] = None) -> Dict:
@@ -323,6 +386,10 @@ def handle_api_request(endpoint: str, method: str = 'GET', params: Optional[Dict
         
         elif endpoint == 'stocks/all':
             return api.get_all_stocks()
+        
+        elif endpoint == 'stocks/refresh' and method == 'POST':
+            symbols = params.get('symbols')
+            return api.refresh_stock_data(symbols)
         
         elif endpoint == 'signals/track' and method == 'POST':
             signal_id = params.get('signal_id', '')

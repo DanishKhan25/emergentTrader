@@ -28,11 +28,15 @@ function handleCORS(response) {
 // Helper function to call Python backend
 async function callPythonAPI(endpoint, method = 'GET', params = {}) {
   return new Promise((resolve, reject) => {
+    // Get the current working directory and construct the python_backend path
+    const projectRoot = process.cwd()
+    const pythonBackendPath = `${projectRoot}/python_backend`
+    
     const pythonScript = `
 import sys
 import os
-sys.path.append('/app/python_backend')
-os.chdir('/app/python_backend')
+sys.path.append('${pythonBackendPath}')
+os.chdir('${pythonBackendPath}')
 from api_handler import handle_api_request
 import json
 
@@ -43,7 +47,28 @@ except Exception as e:
     print(json.dumps({"success": False, "error": str(e)}))
 `
     
-    const pythonProcess = spawn('python3', ['-c', pythonScript], { cwd: '/app/python_backend' })
+    // Try different Python paths
+    const pythonPaths = [
+      '/opt/homebrew/bin/python3',
+      '/usr/local/bin/python3', 
+      '/usr/bin/python3',
+      'python3'
+    ]
+    
+    let pythonPath = 'python3' // default fallback
+    
+    // Use the first available Python path
+    for (const path of pythonPaths) {
+      try {
+        require('fs').accessSync(path)
+        pythonPath = path
+        break
+      } catch (e) {
+        // Continue to next path
+      }
+    }
+    
+    const pythonProcess = spawn(pythonPath, ['-c', pythonScript], { cwd: pythonBackendPath })
     let output = ''
     let error = ''
     
@@ -262,6 +287,23 @@ async function handleRoute(request, { params }) {
       }
     }
 
+    // POST /api/stocks/refresh
+    if (route === '/stocks/refresh' && method === 'POST') {
+      try {
+        const body = await request.json()
+        const { symbols } = body
+        
+        const result = await callPythonAPI('stocks/refresh', 'POST', { symbols })
+        return handleCORS(NextResponse.json(result))
+      } catch (error) {
+        console.error('Error refreshing stock data:', error)
+        return handleCORS(NextResponse.json({
+          success: false,
+          error: error.message
+        }, { status: 500 }))
+      }
+    }
+
     // GET /api/stocks/shariah
     if (route === '/stocks/shariah' && method === 'GET') {
       try {
@@ -350,6 +392,7 @@ async function handleRoute(request, { params }) {
           '/backtest',
           '/backtest/results',
           '/stocks/all',
+          '/stocks/refresh',
           '/stocks/shariah',
           '/performance/summary',
           '/report/send'

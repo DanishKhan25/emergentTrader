@@ -2,6 +2,7 @@
 YFinance Data Fetcher - Handles all market data retrieval using yfinance
 Provides clean, consistent data for trading strategies and backtesting
 """
+import os
 
 import yfinance as yf
 import pandas as pd
@@ -9,6 +10,7 @@ import numpy as np
 from datetime import datetime, timedelta
 import logging
 from typing import Dict, List, Optional, Tuple
+import requests
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -128,49 +130,42 @@ class YFinanceFetcher:
         except Exception as e:
             logger.error(f"Error fetching stock info for {symbol}: {str(e)}")
             return {}
-    
+
     def get_nse_universe(self) -> List[str]:
         """
-        Get list of popular NSE stocks for screening
-        This is a curated list of liquid stocks across sectors
-        
+        Get list of actively traded NSE equity stocks for screening.
+
         Returns:
-            List of stock symbols
+            List of stock symbols like ['RELIANCE', 'TCS', 'ADANIPORTS', ...]
         """
-        # Popular NSE stocks across sectors
-        nse_stocks = [
-            # Large Cap
-            'RELIANCE', 'TCS', 'HDFCBANK', 'BHARTIARTL', 'ICICIBANK',
-            'SBIN', 'LICI', 'ITC', 'HINDUNILVR', 'LT',
-            
-            # IT Sector
-            'INFY', 'WIPRO', 'HCLTECH', 'TECHM', 'LTIM',
-            
-            # Banking & Finance
-            'KOTAKBANK', 'AXISBANK', 'BAJFINANCE', 'HDFCLIFE', 'SBILIFE',
-            
-            # Auto Sector
-            'MARUTI', 'MAHINDRAM', 'TATAMOTORS', 'BAJAJ-AUTO', 'HEROMOTOCO',
-            
-            # Pharma
-            'SUNPHARMA', 'DRREDDY', 'CIPLA', 'APOLLOHOSP', 'DIVISLAB',
-            
-            # FMCG
-            'NESTLEIND', 'BRITANNIA', 'DABUR', 'GODREJCP', 'MARICO',
-            
-            # Metals & Mining
-            'TATASTEEL', 'JSWSTEEL', 'HINDALCO', 'VEDL', 'COALINDIA',
-            
-            # Energy & Power
-            'NTPC', 'POWERGRID', 'ONGC', 'GAIL', 'IOC',
-            
-            # Telecom
-            'AIRTEL', 'JIO', 'INDUSINDBK',
-            
-            # Mid Cap Growth
-            'ADANIPORTS', 'ULTRACEMCO', 'ASIANPAINT', 'BAJAJFINSV', 'TITAN'
-        ]
-        
+        url = "https://archives.nseindia.com/content/equities/EQUITY_L.csv"
+
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+        response = requests.get(url, headers=headers)
+        if response.status_code != 200:
+            raise Exception(f"Failed to download: HTTP {response.status_code}")
+
+        os.makedirs("data", exist_ok=True)
+        with open("data/nse_raw.csv", "wb") as f:
+            f.write(response.content)
+
+        df = pd.read_csv("data/nse_raw.csv")
+        df.columns = df.columns.str.strip()
+
+        symbol_col = 'SYMBOL'
+        series_col = 'SERIES'
+
+        if symbol_col not in df.columns:
+            raise Exception(f"Column '{symbol_col}' not found in data")
+
+        # Filter only EQ series (equity stocks)
+        df_eq = df[df[series_col] == 'EQ']
+
+        # Extract and return the list of symbols
+        nse_stocks = df_eq[symbol_col].tolist()
+
         return nse_stocks
     
     def calculate_technical_indicators(self, data: pd.DataFrame) -> pd.DataFrame:
@@ -233,3 +228,8 @@ class YFinanceFetcher:
         except Exception as e:
             logger.error(f"Error calculating technical indicators: {str(e)}")
             return data
+
+if __name__ == "__main__":
+    fetcher = YFinanceFetcher()
+    stock_list = fetcher.get_nse_universe()
+    print(stock_list)

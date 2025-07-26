@@ -6,6 +6,7 @@ Orchestrates data fetching, strategy execution, and signal storage
 import sys
 import os
 import json
+import uuid
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 import logging
@@ -98,6 +99,7 @@ class SignalEngine:
                     
                     if signal:
                         # Add additional metadata
+                        signal['signal_id'] = str(uuid.uuid4())
                         signal['generated_at'] = datetime.now().isoformat()
                         signal['data_points'] = len(stock_data)
                         signal['last_price_date'] = stock_data.iloc[-1]['date'].isoformat() if 'date' in stock_data.columns else ''
