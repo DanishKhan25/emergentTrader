@@ -20,6 +20,11 @@ class SmartShariahFilter(EnhancedShariahFilter):
         self.batch_size = batch_size
         self.name = "Smart Enhanced Shariah Compliance Filter"
         
+        # Cache for universe results to avoid reprocessing
+        self._cached_universe = None
+        self._cached_universe_timestamp = None
+        self._universe_cache_duration = 3600  # 1 hour cache
+        
         # Configure smart batch processor
         self.batch_config = BatchConfig(
             batch_size=batch_size,
@@ -33,6 +38,68 @@ class SmartShariahFilter(EnhancedShariahFilter):
         self.smart_processor = SmartBatchProcessor(self.batch_config)
         
         logger.info(f"Initialized Smart Shariah Filter with intelligent delay management")
+    
+    def _is_universe_cache_valid(self) -> bool:
+        """Check if the cached universe is still valid"""
+        if self._cached_universe is None or self._cached_universe_timestamp is None:
+            return False
+        
+        from datetime import datetime, timedelta
+        cache_age = datetime.now() - self._cached_universe_timestamp
+        return cache_age.total_seconds() < self._universe_cache_duration
+    
+    def _get_cached_universe_symbols(self) -> Optional[List[str]]:
+        """Get cached Shariah compliant symbols if cache is valid"""
+        if self._is_universe_cache_valid():
+            logger.info(f"Using cached Shariah universe with {len(self._cached_universe)} stocks")
+            return self._cached_universe
+        return None
+    
+    def _cache_universe_symbols(self, symbols: List[str]):
+        """Cache the Shariah compliant symbols"""
+        from datetime import datetime
+        self._cached_universe = symbols
+        self._cached_universe_timestamp = datetime.now()
+        logger.info(f"Cached Shariah universe with {len(symbols)} stocks")
+    
+    def get_shariah_universe_smart_cached(self, nse_stocks: List[Dict], 
+                                        data_fetcher, 
+                                        force_refresh: bool = False) -> List[str]:
+        """
+        Get Shariah compliant universe with intelligent caching
+        Returns only symbols for faster processing
+        """
+        try:
+            # Check cache first unless force refresh
+            if not force_refresh:
+                cached_symbols = self._get_cached_universe_symbols()
+                if cached_symbols is not None:
+                    return cached_symbols
+            
+            # If cache miss or force refresh, process normally
+            logger.info("Cache miss or force refresh - processing Shariah compliance")
+            compliant_result = self.get_shariah_universe_smart(nse_stocks, data_fetcher, force_refresh)
+            
+            # Extract symbols correctly from the result dictionary
+            symbols = []
+            if isinstance(compliant_result, dict) and 'compliant_stocks' in compliant_result:
+                compliant_stocks = compliant_result['compliant_stocks']
+                symbols = [stock['symbol'] for stock in compliant_stocks if isinstance(stock, dict) and 'symbol' in stock]
+            elif isinstance(compliant_result, list):
+                # Fallback for list format
+                symbols = [stock['symbol'] for stock in compliant_result if isinstance(stock, dict) and 'symbol' in stock]
+            
+            # Cache the extracted symbols
+            self._cache_universe_symbols(symbols)
+            
+            logger.info(f"Extracted and cached {len(symbols)} Shariah compliant symbols")
+            return symbols
+            
+        except Exception as e:
+            logger.error(f"Error in smart cached universe: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return []
     
     def get_shariah_universe_smart(self, 
                                  stock_universe: List[Dict], 
