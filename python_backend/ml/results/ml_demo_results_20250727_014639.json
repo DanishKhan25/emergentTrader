@@ -1,0 +1,132 @@
+{
+  "train_auc": 0.9967656659924299,
+  "test_auc": 0.5872282679610636,
+  "train_accuracy": 0.909375,
+  "test_accuracy": 0.615,
+  "cv_auc_mean": 0.5729561133408587,
+  "cv_auc_std": 0.02562553233594863,
+  "feature_importance": [
+    {
+      "feature": "volume_ratio",
+      "importance": 0.09392064889745085
+    },
+    {
+      "feature": "confidence",
+      "importance": 0.09215722122446754
+    },
+    {
+      "feature": "confidence_x_momentum",
+      "importance": 0.08339617861398545
+    },
+    {
+      "feature": "macd",
+      "importance": 0.08285942551222242
+    },
+    {
+      "feature": "market_volatility",
+      "importance": 0.07882276034841683
+    },
+    {
+      "feature": "price_momentum_20d",
+      "importance": 0.07861797736613191
+    },
+    {
+      "feature": "rsi",
+      "importance": 0.07785859770869893
+    },
+    {
+      "feature": "market_momentum",
+      "importance": 0.07771039557294689
+    },
+    {
+      "feature": "rsi_x_confidence",
+      "importance": 0.07591963145470865
+    },
+    {
+      "feature": "volatility_x_momentum",
+      "importance": 0.07576509912614812
+    },
+    {
+      "feature": "symbol_encoded",
+      "importance": 0.041967137629993066
+    },
+    {
+      "feature": "strategy_encoded",
+      "importance": 0.03273629227900174
+    },
+    {
+      "feature": "quarter",
+      "importance": 0.024287627090166176
+    },
+    {
+      "feature": "regime_encoded",
+      "importance": 0.015354853865703589
+    },
+    {
+      "feature": "is_earnings_season",
+      "importance": 0.010775128156431692
+    },
+    {
+      "feature": "high_volume",
+      "importance": 0.010648407090689442
+    },
+    {
+      "feature": "high_confidence",
+      "importance": 0.00867446994732295
+    },
+    {
+      "feature": "low_volatility_market",
+      "importance": 0.008667424512106952
+    },
+    {
+      "feature": "bear_market",
+      "importance": 0.007817184173142928
+    },
+    {
+      "feature": "bull_market",
+      "importance": 0.006868258694541028
+    },
+    {
+      "feature": "positive_momentum",
+      "importance": 0.006448010894519848
+    },
+    {
+      "feature": "rsi_oversold",
+      "importance": 0.004251613064476394
+    },
+    {
+      "feature": "momentum_in_bull",
+      "importance": 0.002684000112610842
+    },
+    {
+      "feature": "low_vol_in_bear",
+      "importance": 0.0017916566641158387
+    }
+  ],
+  "feature_columns": [
+    "confidence",
+    "strategy_encoded",
+    "regime_encoded",
+    "symbol_encoded",
+    "market_volatility",
+    "market_momentum",
+    "rsi",
+    "macd",
+    "volume_ratio",
+    "price_momentum_20d",
+    "bull_market",
+    "bear_market",
+    "high_confidence",
+    "low_volatility_market",
+    "positive_momentum",
+    "rsi_oversold",
+    "high_volume",
+    "confidence_x_momentum",
+    "volatility_x_momentum",
+    "rsi_x_confidence",
+    "momentum_in_bull",
+    "low_vol_in_bear",
+    "is_earnings_season",
+    "quarter"
+  ]
+}
