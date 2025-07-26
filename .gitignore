@@ -51,6 +51,12 @@ __pycache__/
 venv/
 .venv/
 
+# Python Backend Cache and Data
+python_backend/data/cache/
+python_backend/python_backend/data/cache/
+*.pkl
+*.cache
+
 # Development tools
 chainlit.md
 .chainlit

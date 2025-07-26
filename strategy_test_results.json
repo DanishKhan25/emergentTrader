@@ -1,0 +1,95 @@
+{
+  "test_date": "2025-07-26T21:31:19.292202",
+  "summary": {
+    "total_tests": 10,
+    "passed_tests": 5,
+    "success_rate": 50.0
+  },
+  "detailed_results": {
+    "strategy_availability": {
+      "available": [
+        "momentum",
+        "mean_reversion",
+        "breakout",
+        "value_investing"
+      ],
+      "expected": [
+        "momentum",
+        "mean_reversion",
+        "breakout",
+        "value_investing"
+      ],
+      "all_available": true
+    },
+    "momentum_params": {
+      "name": "Momentum Trading",
+      "lookback_period": 20,
+      "min_volume_ratio": 1.2,
+      "min_momentum_score": 5,
+      "max_rsi": 70,
+      "min_rsi": 40
+    },
+    "mean_reversion_params": {
+      "name": "Mean Reversion",
+      "lookback_period": 20,
+      "bollinger_period": 20,
+      "bollinger_std": 2,
+      "rsi_oversold": 30,
+      "rsi_overbought": 70,
+      "min_volume_ratio": 1.1,
+      "price_deviation_threshold": 0.05
+    },
+    "breakout_params": {
+      "name": "Breakout",
+      "consolidation_period": 20,
+      "breakout_threshold": 0.02,
+      "min_volume_surge": 1.5,
+      "max_consolidation_range": 0.15,
+      "min_consolidation_range": 0.03,
+      "atr_multiplier": 2.0,
+      "target_multiplier": 3.0
+    },
+    "value_investing_params": {
+      "name": "Value Investing",
+      "max_pe_ratio": 15,
+      "min_roe": 15,
+      "max_debt_equity": 0.5,
+      "min_current_ratio": 1.2,
+      "min_profit_growth": 10,
+      "max_pb_ratio": 2.0,
+      "min_dividend_yield": 1.0,
+      "price_momentum_weight": 0.3
+    },
+    "momentum_test": {
+      "signals_generated": 0,
+      "success": true,
+      "sample_signal": null
+    },
+    "mean_reversion_test": {
+      "signals_generated": 0,
+      "success": true,
+      "sample_signal": null
+    },
+    "breakout_test": {
+      "signals_generated": 0,
+      "success": true,
+      "sample_signal": null
+    },
+    "value_investing_test": {
+      "signals_generated": 0,
+      "success": true,
+      "sample_signal": null
+    },
+    "multi_strategy_test": {
+      "strategies_tested": 4,
+      "total_signals": 0,
+      "strategy_breakdown": {
+        "momentum": 0,
+        "mean_reversion": 0,
+        "breakout": 0,
+        "value_investing": 0
+      },
+      "success": true
+    }
+  }
+}

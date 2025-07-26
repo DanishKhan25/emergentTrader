@@ -1,0 +1,188 @@
+{
+  "test_date": "2025-07-26T21:24:40.720491",
+  "summary": {
+    "total_tests": 24,
+    "passed_tests": 22,
+    "success_rate": 91.66666666666666
+  },
+  "detailed_results": {
+    "strategy_availability": {
+      "expected_count": 10,
+      "available_count": 10,
+      "all_present": true,
+      "missing_strategies": []
+    },
+    "data_fetching": {
+      "nse_universe_count": 1781,
+      "shariah_stocks_count": 0,
+      "sample_data_points": 0,
+      "success": true
+    },
+    "individual_strategies": {
+      "momentum": {
+        "signals_generated": 0,
+        "success": true,
+        "sample_signal": null
+      },
+      "mean_reversion": {
+        "signals_generated": 0,
+        "success": true,
+        "sample_signal": null
+      },
+      "breakout": {
+        "signals_generated": 0,
+        "success": true,
+        "sample_signal": null
+      },
+      "value_investing": {
+        "signals_generated": 0,
+        "success": true,
+        "sample_signal": null
+      },
+      "swing_trading": {
+        "signals_generated": 0,
+        "success": true,
+        "sample_signal": null
+      },
+      "multibagger": {
+        "signals_generated": 0,
+        "success": true,
+        "sample_signal": null
+      },
+      "fundamental_growth": {
+        "signals_generated": 0,
+        "success": true,
+        "sample_signal": null
+      },
+      "sector_rotation": {
+        "signals_generated": 0,
+        "success": true,
+        "sample_signal": null
+      },
+      "low_volatility": {
+        "signals_generated": 0,
+        "success": true,
+        "sample_signal": null
+      },
+      "pivot_cpr": {
+        "signals_generated": 0,
+        "success": true,
+        "sample_signal": null
+      }
+    },
+    "multi_strategy_test": {
+      "strategies_tested": 4,
+      "total_signals": 0,
+      "strategy_breakdown": {
+        "momentum": 0,
+        "mean_reversion": 0,
+        "breakout": 0,
+        "value_investing": 0
+      },
+      "success": true
+    },
+    "api_endpoints": {
+      "API Health Check": {
+        "success": false,
+        "error": "Endpoint / not found or method GET not supported",
+        "response_time": 0.22721290588378906
+      },
+      "Available Strategies": {
+        "success": true,
+        "response_time": 0.1399517059326172,
+        "data_summary": {
+          "count": 10,
+          "has_data": true
+        }
+      },
+      "NSE Stocks All": {
+        "success": true,
+        "response_time": 50.874948501586914,
+        "data_summary": {
+          "count": 1781,
+          "has_data": true
+        }
+      },
+      "Shariah Stocks": {
+        "success": true,
+        "response_time": 59.74602699279785,
+        "data_summary": {
+          "count": 0,
+          "has_data": true
+        }
+      },
+      "Today's Signals": {
+        "success": true,
+        "response_time": 0.03600120544433594,
+        "data_summary": {
+          "count": 0,
+          "has_data": true
+        }
+      },
+      "Generate Momentum Signals": {
+        "success": true,
+        "response_time": 53.03478240966797,
+        "data_summary": {
+          "count": 0,
+          "has_data": true
+        }
+      },
+      "Generate Mean Reversion Signals": {
+        "success": true,
+        "response_time": 54.30006980895996,
+        "data_summary": {
+          "count": 0,
+          "has_data": true
+        }
+      },
+      "Generate Breakout Signals": {
+        "success": true,
+        "response_time": 53.82800102233887,
+        "data_summary": {
+          "count": 0,
+          "has_data": true
+        }
+      },
+      "Generate Value Investing Signals": {
+        "success": true,
+        "response_time": 53.938865661621094,
+        "data_summary": {
+          "count": 0,
+          "has_data": true
+        }
+      },
+      "Generate Multi-Strategy Signals": {
+        "success": true,
+        "response_time": 167.9689884185791,
+        "data_summary": {
+          "count": 0,
+          "has_data": true
+        }
+      },
+      "Active Signals": {
+        "success": true,
+        "response_time": 0.022172927856445312,
+        "data_summary": {
+          "count": 0,
+          "has_data": true
+        }
+      },
+      "Performance Summary": {
+        "success": false,
+        "error": "EmergentTraderAPI.get_performance_summary() takes from 1 to 2 positional arguments but 3 were given",
+        "response_time": 0.025033950805664062
+      }
+    },
+    "error_handling": {
+      "Invalid Strategy": {
+        "handled_correctly": true
+      },
+      "Invalid Endpoint": {
+        "handled_correctly": true
+      },
+      "Empty Symbol List": {
+        "handled_correctly": true
+      }
+    }
+  }
+}
