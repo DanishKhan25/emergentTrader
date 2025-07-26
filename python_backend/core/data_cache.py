@@ -25,6 +25,7 @@ class DataCache:
             'stock_info': 24,     # Fundamental data - 24 hours
             'nse_universe': 168,  # NSE stock list - 1 week
             'shariah_universe': 24, # Shariah stocks - 24 hours
+            'shariah_compliance': 2160,  # Individual Shariah compliance - 3 months (90 days * 24 hours)
             'signals': 1,         # Generated signals - 1 hour
             'technical_indicators': 2  # Technical analysis - 2 hours
         }
@@ -141,6 +142,35 @@ class DataCache:
             logger.error(f"Error clearing cache: {str(e)}")
             return 0
     
+    def clear_cache_type(self, cache_type: str) -> bool:
+        """Clear all cache entries of a specific type"""
+        try:
+            cache_dir = os.path.join(self.cache_dir, cache_type)
+            if os.path.exists(cache_dir):
+                import shutil
+                shutil.rmtree(cache_dir)
+                os.makedirs(cache_dir, exist_ok=True)
+                logger.info(f"Cleared cache type: {cache_type}")
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"Error clearing cache type {cache_type}: {str(e)}")
+            return False
+    
+    def clear_all_cache(self) -> bool:
+        """Clear all cache entries"""
+        try:
+            if os.path.exists(self.cache_dir):
+                import shutil
+                shutil.rmtree(self.cache_dir)
+                os.makedirs(self.cache_dir, exist_ok=True)
+                logger.info("Cleared all cache")
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"Error clearing all cache: {str(e)}")
+            return False
+    
     def get_cache_stats(self) -> Dict[str, Any]:
         """Get cache statistics"""
         stats = {
@@ -207,6 +237,26 @@ def set_cached_signals(strategy: str, symbols: List[str], signals: List[Dict]) -
     """Cache signals"""
     cache_key = f"{strategy}_{'_'.join(sorted(symbols))}"
     return cache.set('signals', cache_key, signals)
+
+def get_cached_shariah_compliance(symbol: str) -> Optional[Dict]:
+    """Get cached Shariah compliance data"""
+    return cache.get('shariah_compliance', symbol)
+
+def set_cached_shariah_compliance(symbol: str, compliance_data: Dict) -> bool:
+    """Cache Shariah compliance data"""
+    return cache.set('shariah_compliance', symbol, compliance_data)
+
+def refresh_shariah_compliance_cache(symbol: str) -> bool:
+    """Force refresh Shariah compliance cache for a symbol"""
+    return cache.delete('shariah_compliance', symbol)
+
+def get_cached_shariah_summary() -> Optional[Dict]:
+    """Get cached Shariah compliance summary"""
+    return cache.get('shariah_summary', 'latest')
+
+def set_cached_shariah_summary(summary_data: Dict) -> bool:
+    """Cache Shariah compliance summary"""
+    return cache.set('shariah_summary', 'latest', summary_data)
 
 if __name__ == "__main__":
     # Test cache functionality

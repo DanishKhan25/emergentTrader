@@ -252,14 +252,14 @@ class EmergentTraderAPI:
             logger.error(f"Error getting backtest results: {str(e)}")
             return {'success': False, 'error': str(e)}
     
-    def get_shariah_stocks(self) -> Dict:
-        """Get Shariah compliant stock universe"""
+    def get_shariah_stocks(self, force_refresh: bool = False) -> Dict:
+        """Get Shariah compliant stock universe with enhanced filtering"""
         try:
             if not self.signal_engine:
                 return {'success': False, 'error': 'Signal engine not initialized'}
             
-            logger.info("Fetching Shariah compliant stocks")
-            stocks = self.signal_engine.get_shariah_universe()
+            logger.info(f"Fetching Shariah compliant stocks (force_refresh: {force_refresh})")
+            stocks = self.signal_engine.get_shariah_universe(force_refresh)
             
             # Get additional info for each stock
             stock_details = []
@@ -283,12 +283,51 @@ class EmergentTraderAPI:
                     'stocks': stock_details,
                     'total_symbols': len(stocks),
                     'detailed_count': len(stock_details),
+                    'force_refresh_used': force_refresh,
                     'updated_at': datetime.now().isoformat()
                 }
             }
             
         except Exception as e:
             logger.error(f"Error getting Shariah stocks: {str(e)}")
+            return {'success': False, 'error': str(e)}
+    
+    def refresh_shariah_compliance(self, symbols: List[str] = None) -> Dict:
+        """Refresh Shariah compliance cache for specific symbols"""
+        try:
+            if not self.signal_engine:
+                return {'success': False, 'error': 'Signal engine not initialized'}
+            
+            logger.info(f"Refreshing Shariah compliance cache for {len(symbols) if symbols else 'all'} symbols")
+            
+            result = self.signal_engine.refresh_shariah_compliance(symbols)
+            
+            return {
+                'success': True,
+                'data': result
+            }
+            
+        except Exception as e:
+            logger.error(f"Error refreshing Shariah compliance: {str(e)}")
+            return {'success': False, 'error': str(e)}
+    
+    def get_shariah_compliance_summary(self) -> Dict:
+        """Get Shariah compliance filtering summary"""
+        try:
+            if not self.signal_engine:
+                return {'success': False, 'error': 'Signal engine not initialized'}
+            
+            logger.info("Fetching Shariah compliance summary")
+            
+            summary = self.signal_engine.get_shariah_compliance_summary()
+            
+            return {
+                'success': True,
+                'data': summary
+            }
+            
+        except Exception as e:
+            logger.error(f"Error fetching Shariah compliance summary: {str(e)}")
             return {'success': False, 'error': str(e)}
     
     def get_all_stocks(self) -> Dict:
@@ -590,7 +629,15 @@ def handle_api_request(endpoint: str, method: str = 'GET', params: Optional[Dict
             return api.get_backtest_results(test_type)
         
         elif endpoint == 'stocks/shariah':
-            return api.get_shariah_stocks()
+            force_refresh = params.get('force_refresh', False)
+            return api.get_shariah_stocks(force_refresh)
+        
+        elif endpoint == 'shariah/refresh' and method == 'POST':
+            symbols = params.get('symbols')
+            return api.refresh_shariah_compliance(symbols)
+        
+        elif endpoint == 'shariah/summary':
+            return api.get_shariah_compliance_summary()
         
         elif endpoint == 'stocks/all':
             return api.get_all_stocks()

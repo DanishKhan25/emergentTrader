@@ -15,7 +15,7 @@ import logging
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from services.yfinance_fetcher import YFinanceFetcher
-from core.shariah_filter import ShariahFilter
+from core.enhanced_shariah_filter import EnhancedShariahFilter
 from core.strategies.momentum_strategy import MomentumStrategy
 from core.strategies.mean_reversion_strategy import MeanReversionStrategy
 from core.strategies.breakout_strategy import BreakoutStrategy
@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 class SignalEngine:
     def __init__(self):
         self.data_fetcher = YFinanceFetcher()
-        self.shariah_filter = ShariahFilter()
+        self.shariah_filter = EnhancedShariahFilter()
         
         # Initialize all 10 trading strategies
         self.strategies = {
@@ -79,26 +79,62 @@ class SignalEngine:
             }
         return {}
     
-    def get_shariah_universe(self) -> List[str]:
-        """Get list of Shariah compliant stocks"""
+    def get_shariah_universe(self, force_refresh: bool = False) -> List[str]:
+        """Get list of Shariah compliant stocks with enhanced filtering and caching"""
         try:
             # Get NSE universe
             nse_stocks = self.data_fetcher.get_nse_universe()
             
-            # Filter for Shariah compliance
-            compliant_stocks = self.shariah_filter.get_shariah_universe(
-                nse_stocks, self.data_fetcher
+            # Filter for Shariah compliance using enhanced filter
+            compliant_stocks = self.shariah_filter.get_shariah_universe_enhanced(
+                nse_stocks, self.data_fetcher, force_refresh
             )
             
             # Extract symbols
             shariah_symbols = [stock['symbol'] for stock in compliant_stocks]
             
-            logger.info(f"Found {len(shariah_symbols)} Shariah compliant stocks")
+            logger.info(f"Found {len(shariah_symbols)} Shariah compliant stocks (force_refresh: {force_refresh})")
             return shariah_symbols
             
         except Exception as e:
             logger.error(f"Error getting Shariah universe: {str(e)}")
             return []
+    
+    def refresh_shariah_compliance(self, symbols: List[str] = None) -> Dict:
+        """
+        Refresh Shariah compliance cache for specific symbols or trigger full refresh
+        
+        Args:
+            symbols: List of symbols to refresh, or None to refresh all
+            
+        Returns:
+            Summary of refresh operation
+        """
+        try:
+            return self.shariah_filter.refresh_compliance_cache(symbols)
+        except Exception as e:
+            logger.error(f"Error refreshing Shariah compliance: {str(e)}")
+            return {
+                'error': str(e),
+                'refresh_date': datetime.now().isoformat()
+            }
+    
+    def get_shariah_compliance_summary(self) -> Dict:
+        """Get summary of Shariah compliance filtering"""
+        try:
+            from .data_cache import get_cached_shariah_summary
+            summary = get_cached_shariah_summary()
+            
+            if summary:
+                return summary
+            else:
+                return {
+                    'message': 'No compliance summary available. Run Shariah filtering first.',
+                    'last_check': None
+                }
+        except Exception as e:
+            logger.error(f"Error getting Shariah compliance summary: {str(e)}")
+            return {'error': str(e)}
     
     def generate_signals(self, symbols: Optional[List[str]] = None, strategy_name: str = 'momentum', 
                         shariah_only: bool = True, min_confidence: float = 0.6) -> List[Dict]:
