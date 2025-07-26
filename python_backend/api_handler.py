@@ -30,13 +30,16 @@ class EmergentTraderAPI:
             logger.error(f"Error initializing API: {str(e)}")
             self.signal_engine = None
     
-    def generate_signals(self, strategy: str = 'momentum', symbols: Optional[List[str]] = None) -> Dict:
+    def generate_signals(self, strategy: str = 'momentum', symbols: Optional[List[str]] = None, 
+                        shariah_only: bool = True, min_confidence: float = 0.6) -> Dict:
         """
         Generate trading signals
         
         Args:
             strategy: Strategy name to use
             symbols: Optional list of symbols (defaults to Shariah universe)
+            shariah_only: Whether to use only Shariah-compliant stocks
+            min_confidence: Minimum confidence threshold for signals
             
         Returns:
             API response with signals
@@ -45,8 +48,21 @@ class EmergentTraderAPI:
             if not self.signal_engine:
                 return {'success': False, 'error': 'Signal engine not initialized'}
             
-            logger.info(f"Generating signals using {strategy} strategy")
-            signals = self.signal_engine.generate_signals(symbols, strategy)
+            # Validate strategy
+            available_strategies = self.signal_engine.get_available_strategies()
+            if strategy not in available_strategies:
+                return {
+                    'success': False, 
+                    'error': f'Strategy "{strategy}" not found. Available strategies: {available_strategies}'
+                }
+            
+            logger.info(f"Generating signals using {strategy} strategy (shariah_only={shariah_only}, min_confidence={min_confidence})")
+            signals = self.signal_engine.generate_signals(
+                symbols=symbols, 
+                strategy_name=strategy,
+                shariah_only=shariah_only,
+                min_confidence=min_confidence
+            )
             
             return {
                 'success': True,
@@ -54,12 +70,91 @@ class EmergentTraderAPI:
                     'signals': signals,
                     'count': len(signals),
                     'strategy': strategy,
+                    'shariah_only': shariah_only,
+                    'min_confidence': min_confidence,
                     'generated_at': datetime.now().isoformat()
                 }
             }
             
         except Exception as e:
             logger.error(f"Error generating signals: {str(e)}")
+            return {'success': False, 'error': str(e)}
+    
+    def generate_multi_strategy_signals(self, strategies: Optional[List[str]] = None, 
+                                      symbols: Optional[List[str]] = None,
+                                      shariah_only: bool = True, 
+                                      min_confidence: float = 0.6) -> Dict:
+        """
+        Generate signals using multiple strategies
+        
+        Args:
+            strategies: List of strategy names (defaults to all available)
+            symbols: Optional list of symbols
+            shariah_only: Whether to use only Shariah-compliant stocks
+            min_confidence: Minimum confidence threshold
+            
+        Returns:
+            API response with signals from all strategies
+        """
+        try:
+            if not self.signal_engine:
+                return {'success': False, 'error': 'Signal engine not initialized'}
+            
+            all_signals = self.signal_engine.generate_multi_strategy_signals(
+                symbols=symbols,
+                strategies=strategies,
+                shariah_only=shariah_only,
+                min_confidence=min_confidence
+            )
+            
+            # Flatten signals for response
+            combined_signals = []
+            strategy_counts = {}
+            
+            for strategy_name, signals in all_signals.items():
+                combined_signals.extend(signals)
+                strategy_counts[strategy_name] = len(signals)
+            
+            return {
+                'success': True,
+                'data': {
+                    'signals': combined_signals,
+                    'total_count': len(combined_signals),
+                    'strategy_breakdown': strategy_counts,
+                    'strategies_used': list(all_signals.keys()),
+                    'shariah_only': shariah_only,
+                    'min_confidence': min_confidence,
+                    'generated_at': datetime.now().isoformat()
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Error generating multi-strategy signals: {str(e)}")
+            return {'success': False, 'error': str(e)}
+    
+    def get_available_strategies(self) -> Dict:
+        """Get list of available trading strategies"""
+        try:
+            if not self.signal_engine:
+                return {'success': False, 'error': 'Signal engine not initialized'}
+            
+            strategies = self.signal_engine.get_available_strategies()
+            strategy_info = {}
+            
+            for strategy_name in strategies:
+                strategy_info[strategy_name] = self.signal_engine.get_strategy_info(strategy_name)
+            
+            return {
+                'success': True,
+                'data': {
+                    'strategies': strategies,
+                    'count': len(strategies),
+                    'details': strategy_info
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting available strategies: {str(e)}")
             return {'success': False, 'error': str(e)}
     
     def get_active_signals(self, strategy: Optional[str] = None) -> Dict:
@@ -361,7 +456,19 @@ def handle_api_request(endpoint: str, method: str = 'GET', params: Optional[Dict
         if endpoint == 'signals/generate' and method == 'POST':
             strategy = params.get('strategy', 'momentum')
             symbols = params.get('symbols')
-            return api.generate_signals(strategy, symbols)
+            shariah_only = params.get('shariah_only', True)
+            min_confidence = params.get('min_confidence', 0.6)
+            return api.generate_signals(strategy, symbols, shariah_only, min_confidence)
+        
+        elif endpoint == 'signals/generate/multi' and method == 'POST':
+            strategies = params.get('strategies')
+            symbols = params.get('symbols')
+            shariah_only = params.get('shariah_only', True)
+            min_confidence = params.get('min_confidence', 0.6)
+            return api.generate_multi_strategy_signals(strategies, symbols, shariah_only, min_confidence)
+        
+        elif endpoint == 'strategies/available':
+            return api.get_available_strategies()
         
         elif endpoint == 'signals/active' or endpoint == 'signals/open':
             strategy = params.get('strategy')
@@ -375,7 +482,8 @@ def handle_api_request(endpoint: str, method: str = 'GET', params: Optional[Dict
             start_date = params.get('start_date', '2012-01-01')
             end_date = params.get('end_date', '2018-12-31')
             symbols = params.get('symbols')
-            return api.run_backtest(strategy, start_date, end_date, symbols)
+            shariah_only = params.get('shariah_only', True)
+            return api.run_backtest(strategy, start_date, end_date, symbols, shariah_only)
         
         elif endpoint == 'backtest/results':
             test_type = params.get('type', 'backtest')
@@ -392,12 +500,14 @@ def handle_api_request(endpoint: str, method: str = 'GET', params: Optional[Dict
             return api.refresh_stock_data(symbols)
         
         elif endpoint == 'signals/track' and method == 'POST':
-            signal_id = params.get('signal_id', '')
-            return api.track_signal_performance(signal_id)
+            signal_ids = params.get('signal_ids', [])
+            update_prices = params.get('update_prices', True)
+            return api.track_signal_performance(signal_ids, update_prices)
         
         elif endpoint == 'performance/summary':
-            strategy = params.get('strategy', 'momentum')
-            return api.get_performance_summary(strategy)
+            strategy = params.get('strategy')
+            period = params.get('period', '30d')
+            return api.get_performance_summary(strategy, period)
         
         elif endpoint == 'report/send' and method == 'POST':
             report_type = params.get('type', 'daily')

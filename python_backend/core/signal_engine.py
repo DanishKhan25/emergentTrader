@@ -17,6 +17,9 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from services.yfinance_fetcher import YFinanceFetcher
 from core.shariah_filter import ShariahFilter
 from core.strategies.momentum_strategy import MomentumStrategy
+from core.strategies.mean_reversion_strategy import MeanReversionStrategy
+from core.strategies.breakout_strategy import BreakoutStrategy
+from core.strategies.value_investing_strategy import ValueInvestingStrategy
 from core.backtest_engine import BacktestEngine
 
 logger = logging.getLogger(__name__)
@@ -26,9 +29,12 @@ class SignalEngine:
         self.data_fetcher = YFinanceFetcher()
         self.shariah_filter = ShariahFilter()
         
-        # Initialize strategies
+        # Initialize all available strategies
         self.strategies = {
-            'momentum': MomentumStrategy()
+            'momentum': MomentumStrategy(),
+            'mean_reversion': MeanReversionStrategy(),
+            'breakout': BreakoutStrategy(),
+            'value_investing': ValueInvestingStrategy()
         }
         
         self.backtest_engine = BacktestEngine()
@@ -37,6 +43,21 @@ class SignalEngine:
         self.active_signals = []
         self.signal_history = []
         
+    def get_available_strategies(self) -> List[str]:
+        """Get list of available trading strategies"""
+        return list(self.strategies.keys())
+        
+    def get_strategy_info(self, strategy_name: str) -> Dict:
+        """Get information about a specific strategy"""
+        if strategy_name in self.strategies:
+            strategy = self.strategies[strategy_name]
+            return {
+                'name': strategy.name,
+                'parameters': strategy.get_strategy_params(),
+                'description': strategy.__doc__ or f"{strategy.name} trading strategy"
+            }
+        return {}
+    
     def get_shariah_universe(self) -> List[str]:
         """Get list of Shariah compliant stocks"""
         try:
@@ -58,27 +79,38 @@ class SignalEngine:
             logger.error(f"Error getting Shariah universe: {str(e)}")
             return []
     
-    def generate_signals(self, symbols: Optional[List[str]] = None, strategy_name: str = 'momentum') -> List[Dict]:
+    def generate_signals(self, symbols: Optional[List[str]] = None, strategy_name: str = 'momentum', 
+                        shariah_only: bool = True, min_confidence: float = 0.6) -> List[Dict]:
         """
         Generate trading signals for given symbols using specified strategy
         
         Args:
-            symbols: List of stock symbols (defaults to Shariah compliant universe)
+            symbols: List of stock symbols (defaults to Shariah compliant universe if shariah_only=True)
             strategy_name: Strategy to use for signal generation
+            shariah_only: Whether to use only Shariah compliant stocks
+            min_confidence: Minimum confidence score for signals
             
         Returns:
             List of generated signals
         """
         try:
+            # Determine stock universe
             if symbols is None:
-                symbols = self.get_shariah_universe()
+                if shariah_only:
+                    symbols = self.get_shariah_universe()
+                else:
+                    # Get full NSE universe
+                    nse_stocks = self.data_fetcher.get_nse_universe()
+                    symbols = [stock['symbol'] for stock in nse_stocks]
             
             if strategy_name not in self.strategies:
-                logger.error(f"Strategy {strategy_name} not found")
+                logger.error(f"Strategy {strategy_name} not found. Available: {list(self.strategies.keys())}")
                 return []
             
             strategy = self.strategies[strategy_name]
             generated_signals = []
+            
+            logger.info(f"Generating {strategy_name} signals for {len(symbols)} stocks")
             
             for symbol in symbols:
                 try:
@@ -86,6 +118,7 @@ class SignalEngine:
                     stock_data = self.data_fetcher.get_nse_stock_data(symbol, period="1y")
                     
                     if stock_data.empty:
+                        logger.warning(f"No data available for {symbol}")
                         continue
                     
                     # Add technical indicators
@@ -94,8 +127,125 @@ class SignalEngine:
                     # Get stock fundamental info
                     stock_info = self.data_fetcher.get_stock_info(symbol)
                     
+                    # Add Shariah compliance info
+                    if shariah_only:
+                        stock_info['shariah_compliant'] = True
+                    else:
+                        # Check Shariah compliance
+                        shariah_stocks = self.get_shariah_universe()
+                        stock_info['shariah_compliant'] = symbol in shariah_stocks
+                    
                     # Generate signal
                     signal = strategy.generate_signal(symbol, stock_data, stock_info)
+                    
+                    if signal:
+                        # Add unique signal ID if not present
+                        if 'signal_id' not in signal:
+                            signal['signal_id'] = str(uuid.uuid4())
+                        
+                        # Add strategy metadata
+                        signal['strategy'] = strategy_name
+                        signal['generated_at'] = datetime.now().isoformat()
+                        signal['shariah_compliant'] = stock_info.get('shariah_compliant', False)
+                        signal['status'] = 'ACTIVE'
+                        
+                        # Filter by confidence score
+                        confidence = signal.get('confidence_score', 0)
+                        if confidence >= min_confidence:
+                            generated_signals.append(signal)
+                            logger.info(f"Generated {signal['signal_type']} signal for {symbol} using {strategy_name}")
+                        else:
+                            logger.debug(f"Signal for {symbol} filtered out due to low confidence: {confidence}")
+                    
+                except Exception as e:
+                    logger.error(f"Error generating signal for {symbol}: {str(e)}")
+                    continue
+            
+            # Store signals in history
+            self.signal_history.extend(generated_signals)
+            
+            # Update active signals (remove old ones, add new ones)
+            self._update_active_signals(generated_signals)
+            
+            logger.info(f"Generated {len(generated_signals)} signals using {strategy_name} strategy")
+            return generated_signals
+            
+        except Exception as e:
+            logger.error(f"Error in signal generation: {str(e)}")
+            return []
+    
+    def generate_multi_strategy_signals(self, symbols: Optional[List[str]] = None, 
+                                      strategies: Optional[List[str]] = None,
+                                      shariah_only: bool = True, 
+                                      min_confidence: float = 0.6) -> Dict[str, List[Dict]]:
+        """
+        Generate signals using multiple strategies
+        
+        Args:
+            symbols: List of stock symbols
+            strategies: List of strategy names (defaults to all available)
+            shariah_only: Whether to use only Shariah compliant stocks
+            min_confidence: Minimum confidence score for signals
+            
+        Returns:
+            Dictionary with strategy names as keys and signal lists as values
+        """
+        try:
+            if strategies is None:
+                strategies = list(self.strategies.keys())
+            
+            all_signals = {}
+            
+            for strategy_name in strategies:
+                if strategy_name in self.strategies:
+                    signals = self.generate_signals(
+                        symbols=symbols,
+                        strategy_name=strategy_name,
+                        shariah_only=shariah_only,
+                        min_confidence=min_confidence
+                    )
+                    all_signals[strategy_name] = signals
+                else:
+                    logger.warning(f"Strategy {strategy_name} not found")
+                    all_signals[strategy_name] = []
+            
+            return all_signals
+            
+        except Exception as e:
+            logger.error(f"Error in multi-strategy signal generation: {str(e)}")
+            return {}
+    
+    def _update_active_signals(self, new_signals: List[Dict]):
+        """Update active signals list"""
+        try:
+            # Remove expired signals (older than validity period)
+            current_time = datetime.now()
+            active_signals = []
+            
+            for signal in self.active_signals:
+                generated_time = datetime.fromisoformat(signal.get('generated_at', current_time.isoformat()))
+                validity_days = signal.get('validity_days', 5)
+                
+                if (current_time - generated_time).days < validity_days:
+                    active_signals.append(signal)
+            
+            # Add new signals
+            active_signals.extend(new_signals)
+            
+            self.active_signals = active_signals
+            
+        except Exception as e:
+            logger.error(f"Error updating active signals: {str(e)}")
+    
+    def get_active_signals(self, strategy_name: Optional[str] = None) -> List[Dict]:
+        """Get currently active signals"""
+        try:
+            if strategy_name:
+                return [s for s in self.active_signals if s.get('strategy') == strategy_name]
+            return self.active_signals
+        except Exception as e:
+            logger.error(f"Error getting active signals: {str(e)}")
+            return []
                     
                     if signal:
                         # Add additional metadata
