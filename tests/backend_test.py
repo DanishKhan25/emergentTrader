@@ -297,8 +297,8 @@ class EmergentTraderAPITester:
                 data
             )
     
-    def test_mongodb_storage(self):
-        """Verify data is stored in MongoDB when signals are generated"""
+    def test_database_storage(self):
+        """Verify data is stored in SQLite database when signals are generated"""
         # This test relies on the generate_signals test having run successfully
         if hasattr(self, 'generated_signals') and self.generated_signals:
             # Check if we can retrieve the signals (indicating they were stored)
@@ -306,20 +306,20 @@ class EmergentTraderAPITester:
             
             if success and data.get('success'):
                 self.log_test(
-                    "MongoDB Storage Verification", 
+                    "SQLite Database Storage Verification", 
                     True, 
-                    f"Signals successfully stored and retrieved from MongoDB"
+                    f"Signals successfully stored and retrieved from SQLite database"
                 )
             else:
                 self.log_test(
-                    "MongoDB Storage Verification", 
+                    "SQLite Database Storage Verification", 
                     False, 
-                    f"Could not verify MongoDB storage", 
+                    f"Could not verify SQLite database storage", 
                     data
                 )
         else:
             self.log_test(
-                "MongoDB Storage Verification", 
+                "SQLite Database Storage Verification", 
                 True, 
                 f"No signals generated to test storage (dependency on signal generation)"
             )
@@ -403,7 +403,7 @@ class EmergentTraderAPITester:
         print("3. INTEGRATION TESTS")
         print("-" * 30)
         self.test_python_integration()
-        self.test_mongodb_storage()
+        self.test_database_storage()
         
         # Error handling tests
         print("4. ERROR HANDLING TESTS")
