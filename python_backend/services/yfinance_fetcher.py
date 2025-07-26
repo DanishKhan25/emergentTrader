@@ -3,6 +3,9 @@ YFinance Data Fetcher - Handles all market data retrieval using yfinance
 Provides clean, consistent data for trading strategies and backtesting
 """
 import os
+import time
+import random
+from functools import wraps
 
 import yfinance as yf
 import pandas as pd
@@ -15,13 +18,78 @@ import requests
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def rate_limit(delay_range=(1, 3), max_retries=3):
+    """
+    Decorator to add rate limiting and retry logic to API calls
+    
+    Args:
+        delay_range: Tuple of (min_delay, max_delay) in seconds
+        max_retries: Maximum number of retry attempts
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            for attempt in range(max_retries + 1):
+                try:
+                    # Add random delay to avoid rate limiting
+                    if attempt > 0:
+                        delay = random.uniform(delay_range[0], delay_range[1]) * (attempt + 1)
+                        logger.info(f"Rate limit delay: {delay:.1f}s (attempt {attempt + 1})")
+                        time.sleep(delay)
+                    
+                    result = func(*args, **kwargs)
+                    return result
+                    
+                except Exception as e:
+                    error_msg = str(e).lower()
+                    
+                    # Check for rate limiting errors
+                    if any(phrase in error_msg for phrase in ['rate limit', 'too many requests', '429']):
+                        if attempt < max_retries:
+                            backoff_delay = random.uniform(5, 15) * (attempt + 1)
+                            logger.warning(f"Rate limited. Backing off for {backoff_delay:.1f}s...")
+                            time.sleep(backoff_delay)
+                            continue
+                        else:
+                            logger.error(f"Max retries exceeded for rate limiting: {func.__name__}")
+                            return pd.DataFrame() if 'DataFrame' in str(func.__annotations__.get('return', '')) else {}
+                    
+                    # Check for network/connection errors
+                    elif any(phrase in error_msg for phrase in ['connection', 'timeout', 'network']):
+                        if attempt < max_retries:
+                            retry_delay = random.uniform(2, 5)
+                            logger.warning(f"Network error. Retrying in {retry_delay:.1f}s...")
+                            time.sleep(retry_delay)
+                            continue
+                        else:
+                            logger.error(f"Max retries exceeded for network error: {func.__name__}")
+                            return pd.DataFrame() if 'DataFrame' in str(func.__annotations__.get('return', '')) else {}
+                    
+                    # For other errors, don't retry
+                    else:
+                        logger.error(f"Error in {func.__name__}: {str(e)}")
+                        return pd.DataFrame() if 'DataFrame' in str(func.__annotations__.get('return', '')) else {}
+            
+            # Should not reach here
+            return pd.DataFrame() if 'DataFrame' in str(func.__annotations__.get('return', '')) else {}
+        
+        return wrapper
+    return decorator
+
 class YFinanceFetcher:
     def __init__(self):
         self.nse_suffix = ".NS"  # NSE suffix for Indian stocks
+        self.session = requests.Session()  # Reuse session for better performance
         
+        # Set user agent to avoid blocking
+        self.session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        })
+        
+    @rate_limit(delay_range=(0.5, 2), max_retries=3)
     def get_nse_stock_data(self, symbol: str, period: str = "2y", interval: str = "1d") -> pd.DataFrame:
         """
-        Fetch stock data for NSE listed stocks
+        Fetch stock data for NSE listed stocks with rate limiting
         
         Args:
             symbol: Stock symbol (will add .NS suffix)
@@ -36,7 +104,7 @@ class YFinanceFetcher:
             if not symbol.endswith(self.nse_suffix):
                 symbol += self.nse_suffix
             
-            ticker = yf.Ticker(symbol)
+            ticker = yf.Ticker(symbol, session=self.session)
             data = ticker.history(period=period, interval=interval)
             
             if data.empty:
@@ -47,6 +115,7 @@ class YFinanceFetcher:
             data.columns = [col.lower().replace(' ', '_') for col in data.columns]
             data.reset_index(inplace=True)
             data['symbol'] = symbol.replace(self.nse_suffix, "")
+            
             
             return data
             
@@ -88,9 +157,10 @@ class YFinanceFetcher:
             logger.error(f"Error fetching historical data for {symbol}: {str(e)}")
             return pd.DataFrame()
     
+    @rate_limit(delay_range=(1, 3), max_retries=3)
     def get_stock_info(self, symbol: str) -> Dict:
         """
-        Get fundamental information about a stock
+        Get fundamental information about a stock with rate limiting
         
         Args:
             symbol: Stock symbol
@@ -102,71 +172,240 @@ class YFinanceFetcher:
             if not symbol.endswith(self.nse_suffix):
                 symbol += self.nse_suffix
             
-            ticker = yf.Ticker(symbol)
+            ticker = yf.Ticker(symbol, session=self.session)
             info = ticker.info
             
-            # Extract key fundamental metrics
+            # Extract key fundamental metrics with safe defaults
             fundamental_data = {
                 'symbol': symbol.replace(self.nse_suffix, ""),
                 'company_name': info.get('longName', ''),
-                'sector': info.get('sector', ''),
-                'industry': info.get('industry', ''),
+                'sector': info.get('sector', 'Unknown'),
+                'industry': info.get('industry', 'Unknown'),
                 'market_cap': info.get('marketCap', 0),
-                'pe_ratio': info.get('trailingPE', 0),
+                'pe_ratio': info.get('trailingPE', 0) or info.get('forwardPE', 0),
                 'pb_ratio': info.get('priceToBook', 0),
-                'debt_to_equity': info.get('debtToEquity', 0),
-                'roe': info.get('returnOnEquity', 0),
-                'current_price': info.get('currentPrice', 0),
-                'beta': info.get('beta', 0),
+                'debt_to_equity': info.get('debtToEquity', 0) / 100 if info.get('debtToEquity') else 0,  # Convert to ratio
+                'debt_equity_ratio': info.get('debtToEquity', 0) / 100 if info.get('debtToEquity') else 0,
+                'roe': (info.get('returnOnEquity', 0) * 100) if info.get('returnOnEquity') else 0,  # Convert to percentage
+                'current_ratio': info.get('currentRatio', 0),
+                'current_price': info.get('currentPrice', 0) or info.get('regularMarketPrice', 0),
+                'beta': info.get('beta', 1.0),
                 '52_week_high': info.get('fiftyTwoWeekHigh', 0),
                 '52_week_low': info.get('fiftyTwoWeekLow', 0),
-                'dividend_yield': info.get('dividendYield', 0),
-                'earnings_growth': info.get('earningsGrowth', 0),
-                'revenue_growth': info.get('revenueGrowth', 0)
+                'dividend_yield': (info.get('dividendYield', 0) * 100) if info.get('dividendYield') else 0,  # Convert to percentage
+                'earnings_growth': (info.get('earningsGrowth', 0) * 100) if info.get('earningsGrowth') else 0,
+                'profit_growth': (info.get('earningsGrowth', 0) * 100) if info.get('earningsGrowth') else 0,
+                'revenue_growth': (info.get('revenueGrowth', 0) * 100) if info.get('revenueGrowth') else 0,
+                'book_value_per_share': info.get('bookValue', 0),
+                'eps': info.get('trailingEps', 0) or info.get('forwardEps', 0),
+                'price_to_sales': info.get('priceToSalesTrailing12Months', 0),
+                'enterprise_value': info.get('enterpriseValue', 0),
+                'ebitda': info.get('ebitda', 0),
+                'total_cash': info.get('totalCash', 0),
+                'total_debt': info.get('totalDebt', 0),
+                'free_cash_flow': info.get('freeCashflow', 0),
+                'operating_margin': (info.get('operatingMargins', 0) * 100) if info.get('operatingMargins') else 0,
+                'profit_margin': (info.get('profitMargins', 0) * 100) if info.get('profitMargins') else 0,
+                'gross_margin': (info.get('grossMargins', 0) * 100) if info.get('grossMargins') else 0,
+                'last_updated': datetime.now().isoformat()
             }
             
+            logger.debug(f"Successfully fetched info for {symbol}")
             return fundamental_data
             
         except Exception as e:
             logger.error(f"Error fetching stock info for {symbol}: {str(e)}")
+            # Return default structure to prevent downstream errors
+            return {
+                'symbol': symbol.replace(self.nse_suffix, "") if symbol.endswith(self.nse_suffix) else symbol,
+                'company_name': '',
+                'sector': 'Unknown',
+                'industry': 'Unknown',
+                'market_cap': 0,
+                'pe_ratio': 0,
+                'pb_ratio': 0,
+                'debt_equity_ratio': 0,
+                'roe': 0,
+                'current_ratio': 1.0,
+                'current_price': 0,
+                'beta': 1.0,
+                'dividend_yield': 0,
+                'profit_growth': 0,
+                'eps': 0,
+                'book_value_per_share': 0,
+                'last_updated': datetime.now().isoformat(),
+                'error': str(e)
+            }
             return {}
 
-    def get_nse_universe(self) -> List[str]:
+    def get_nse_universe(self) -> List[Dict]:
         """
         Get list of actively traded NSE equity stocks for screening.
 
         Returns:
-            List of stock symbols like ['RELIANCE', 'TCS', 'ADANIPORTS', ...]
+            List of stock dictionaries with symbol and basic info
         """
-        url = "https://archives.nseindia.com/content/equities/EQUITY_L.csv"
+        try:
+            # Try to load from local cache first
+            cache_file = "python_backend/data/nse_raw.csv"
+            if os.path.exists(cache_file):
+                df = pd.read_csv(cache_file)
+            else:
+                url = "https://archives.nseindia.com/content/equities/EQUITY_L.csv"
+                headers = {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                }
+                response = requests.get(url, headers=headers)
+                if response.status_code != 200:
+                    logger.error(f"Failed to download NSE data: HTTP {response.status_code}")
+                    # Return fallback list
+                    return self._get_fallback_nse_universe()
 
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        }
-        response = requests.get(url, headers=headers)
-        if response.status_code != 200:
-            raise Exception(f"Failed to download: HTTP {response.status_code}")
+                os.makedirs("python_backend/data", exist_ok=True)
+                with open(cache_file, "wb") as f:
+                    f.write(response.content)
+                df = pd.read_csv(cache_file)
 
-        os.makedirs("data", exist_ok=True)
-        with open("data/nse_raw.csv", "wb") as f:
-            f.write(response.content)
+            df.columns = df.columns.str.strip()
+            symbol_col = 'SYMBOL'
+            series_col = 'SERIES'
 
-        df = pd.read_csv("data/nse_raw.csv")
-        df.columns = df.columns.str.strip()
+            if symbol_col not in df.columns:
+                logger.error(f"Column '{symbol_col}' not found in NSE data")
+                return self._get_fallback_nse_universe()
 
-        symbol_col = 'SYMBOL'
-        series_col = 'SERIES'
+            # Filter only EQ series (equity stocks)
+            df_eq = df[df[series_col] == 'EQ']
+            
+            # Convert to list of dictionaries
+            nse_stocks = []
+            for _, row in df_eq.iterrows():
+                nse_stocks.append({
+                    'symbol': row[symbol_col],
+                    'name': row.get('NAME OF COMPANY', ''),
+                    'series': row.get(series_col, 'EQ'),
+                    'date_of_listing': row.get('DATE OF LISTING', ''),
+                    'paid_up_value': row.get('PAID UP VALUE', 0),
+                    'market_lot': row.get('MARKET LOT', 1),
+                    'isin_number': row.get('ISIN NUMBER', ''),
+                    'face_value': row.get('FACE VALUE', 0)
+                })
 
-        if symbol_col not in df.columns:
-            raise Exception(f"Column '{symbol_col}' not found in data")
-
-        # Filter only EQ series (equity stocks)
-        df_eq = df[df[series_col] == 'EQ']
-
-        # Extract and return the list of symbols
-        nse_stocks = df_eq[symbol_col].tolist()
-
-        return nse_stocks
+            logger.info(f"Loaded {len(nse_stocks)} NSE stocks from universe")
+            return nse_stocks
+            
+        except Exception as e:
+            logger.error(f"Error loading NSE universe: {str(e)}")
+            return self._get_fallback_nse_universe()
+    
+    def _get_fallback_nse_universe(self) -> List[Dict]:
+        """Fallback NSE universe with major stocks"""
+        fallback_stocks = [
+            {'symbol': 'RELIANCE', 'name': 'Reliance Industries Limited', 'sector': 'Oil & Gas'},
+            {'symbol': 'TCS', 'name': 'Tata Consultancy Services Limited', 'sector': 'Information Technology'},
+            {'symbol': 'HDFCBANK', 'name': 'HDFC Bank Limited', 'sector': 'Banking'},
+            {'symbol': 'INFY', 'name': 'Infosys Limited', 'sector': 'Information Technology'},
+            {'symbol': 'HINDUNILVR', 'name': 'Hindustan Unilever Limited', 'sector': 'FMCG'},
+            {'symbol': 'ICICIBANK', 'name': 'ICICI Bank Limited', 'sector': 'Banking'},
+            {'symbol': 'KOTAKBANK', 'name': 'Kotak Mahindra Bank Limited', 'sector': 'Banking'},
+            {'symbol': 'BHARTIARTL', 'name': 'Bharti Airtel Limited', 'sector': 'Telecommunications'},
+            {'symbol': 'ITC', 'name': 'ITC Limited', 'sector': 'FMCG'},
+            {'symbol': 'SBIN', 'name': 'State Bank of India', 'sector': 'Banking'},
+            {'symbol': 'MARUTI', 'name': 'Maruti Suzuki India Limited', 'sector': 'Automobile'},
+            {'symbol': 'DIVISLAB', 'name': 'Divi\'s Laboratories Limited', 'sector': 'Pharmaceuticals'},
+            {'symbol': 'WIPRO', 'name': 'Wipro Limited', 'sector': 'Information Technology'},
+            {'symbol': 'TECHM', 'name': 'Tech Mahindra Limited', 'sector': 'Information Technology'},
+            {'symbol': 'HCLTECH', 'name': 'HCL Technologies Limited', 'sector': 'Information Technology'}
+        ]
+        logger.info(f"Using fallback NSE universe with {len(fallback_stocks)} stocks")
+        return fallback_stocks
+    
+    def get_multiple_stock_info(self, symbols: List[str], batch_size: int = 5) -> Dict[str, Dict]:
+        """
+        Get stock info for multiple symbols with batch processing and rate limiting
+        
+        Args:
+            symbols: List of stock symbols
+            batch_size: Number of stocks to process in each batch
+            
+        Returns:
+            Dictionary mapping symbols to their info
+        """
+        stock_info = {}
+        total_symbols = len(symbols)
+        
+        logger.info(f"Fetching info for {total_symbols} stocks in batches of {batch_size}")
+        
+        for i in range(0, total_symbols, batch_size):
+            batch = symbols[i:i + batch_size]
+            batch_num = (i // batch_size) + 1
+            total_batches = (total_symbols + batch_size - 1) // batch_size
+            
+            logger.info(f"Processing batch {batch_num}/{total_batches}: {batch}")
+            
+            for symbol in batch:
+                try:
+                    info = self.get_stock_info(symbol)
+                    stock_info[symbol] = info
+                    
+                    # Small delay between stocks in the same batch
+                    time.sleep(random.uniform(0.2, 0.5))
+                    
+                except Exception as e:
+                    logger.error(f"Error fetching info for {symbol}: {str(e)}")
+                    stock_info[symbol] = {'error': str(e)}
+            
+            # Longer delay between batches
+            if i + batch_size < total_symbols:
+                batch_delay = random.uniform(2, 4)
+                logger.info(f"Batch delay: {batch_delay:.1f}s")
+                time.sleep(batch_delay)
+        
+        logger.info(f"Successfully fetched info for {len([k for k, v in stock_info.items() if 'error' not in v])}/{total_symbols} stocks")
+        return stock_info
+    
+    def get_multiple_stock_data(self, symbols: List[str], period: str = "1y", batch_size: int = 10) -> Dict[str, pd.DataFrame]:
+        """
+        Get historical data for multiple symbols with batch processing
+        
+        Args:
+            symbols: List of stock symbols
+            period: Data period
+            batch_size: Number of stocks to process in each batch
+            
+        Returns:
+            Dictionary mapping symbols to their DataFrames
+        """
+        stock_data = {}
+        total_symbols = len(symbols)
+        
+        logger.info(f"Fetching data for {total_symbols} stocks in batches of {batch_size}")
+        
+        for i in range(0, total_symbols, batch_size):
+            batch = symbols[i:i + batch_size]
+            batch_num = (i // batch_size) + 1
+            total_batches = (total_symbols + batch_size - 1) // batch_size
+            
+            logger.info(f"Processing data batch {batch_num}/{total_batches}")
+            
+            for symbol in batch:
+                try:
+                    data = self.get_nse_stock_data(symbol, period=period)
+                    if not data.empty:
+                        stock_data[symbol] = data
+                    
+                    # Small delay between requests
+                    time.sleep(random.uniform(0.1, 0.3))
+                    
+                except Exception as e:
+                    logger.error(f"Error fetching data for {symbol}: {str(e)}")
+            
+            # Delay between batches
+            if i + batch_size < total_symbols:
+                time.sleep(random.uniform(1, 2))
+        
+        logger.info(f"Successfully fetched data for {len(stock_data)}/{total_symbols} stocks")
+        return stock_data
     
     def calculate_technical_indicators(self, data: pd.DataFrame) -> pd.DataFrame:
         """

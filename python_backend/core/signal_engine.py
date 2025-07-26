@@ -246,31 +246,6 @@ class SignalEngine:
         except Exception as e:
             logger.error(f"Error getting active signals: {str(e)}")
             return []
-                    
-                    if signal:
-                        # Add additional metadata
-                        signal['signal_id'] = str(uuid.uuid4())
-                        signal['generated_at'] = datetime.now().isoformat()
-                        signal['data_points'] = len(stock_data)
-                        signal['last_price_date'] = stock_data.iloc[-1]['date'].isoformat() if 'date' in stock_data.columns else ''
-                        
-                        generated_signals.append(signal)
-                        logger.info(f"Generated signal for {symbol}: {signal['signal_type']}")
-                
-                except Exception as e:
-                    logger.error(f"Error processing {symbol}: {str(e)}")
-                    continue
-            
-            # Store signals
-            self.active_signals.extend(generated_signals)
-            self.signal_history.extend(generated_signals)
-            
-            logger.info(f"Generated {len(generated_signals)} signals using {strategy_name} strategy")
-            return generated_signals
-            
-        except Exception as e:
-            logger.error(f"Error generating signals: {str(e)}")
-            return []
     
     def backtest_strategy(self, 
                          strategy_name: str = 'momentum',
