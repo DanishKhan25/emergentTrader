@@ -13,7 +13,7 @@ from typing import Dict, List, Optional
 # Add the python_backend directory to the path
 sys.path.append(os.path.dirname(__file__))
 
-from core.signal_engine import SignalEngine
+from core.enhanced_signal_engine import EnhancedSignalEngine
 import logging
 
 # Configure logging
@@ -24,8 +24,8 @@ class EmergentTraderAPI:
     def __init__(self):
         """Initialize the trading API"""
         try:
-            self.signal_engine = SignalEngine()
-            logger.info("EmergentTrader API initialized successfully")
+            self.signal_engine = EnhancedSignalEngine()
+            logger.info("EmergentTrader API initialized successfully with enhanced signal engine and database storage")
         except Exception as e:
             logger.error(f"Error initializing API: {str(e)}")
             self.signal_engine = None

@@ -28,6 +28,7 @@ from core.strategies.sector_rotation_strategy import SectorRotationStrategy
 from core.strategies.low_volatility_strategy import LowVolatilityStrategy
 from core.strategies.pivot_cpr_strategy import PivotCPRStrategy
 from core.backtest_engine import BacktestEngine
+from core.signal_database import SignalDatabase, save_signals, save_consensus_signals
 
 logger = logging.getLogger(__name__)
 
@@ -56,12 +57,15 @@ class EnhancedSignalEngine:
         # Initialize consensus engine
         self.consensus_engine = ConsensusEngine(self)
         
+        # Initialize signal database
+        self.signal_db = SignalDatabase()
+        
         # Signal storage
         self.active_signals = []
         self.signal_history = []
         self.consensus_signals = []
         
-        logger.info("Enhanced Signal Engine initialized with 10 strategies and consensus engine")
+        logger.info("Enhanced Signal Engine initialized with 10 strategies, consensus engine, and database storage")
     
     def get_available_strategies(self) -> List[str]:
         """Get list of available trading strategies"""
@@ -122,7 +126,7 @@ class EnhancedSignalEngine:
                 min_strategy_confidence=0.5
             )
             
-            # Store consensus signals
+            # Store consensus signals in memory and database
             for signal in consensus_signals:
                 signal['id'] = str(uuid.uuid4())
                 signal['generated_at'] = datetime.now().isoformat()
@@ -131,6 +135,11 @@ class EnhancedSignalEngine:
                 self.consensus_signals.append(signal)
                 self.active_signals.append(signal)
                 self.signal_history.append(signal)
+            
+            # Save consensus signals to database
+            if consensus_signals:
+                saved_count = save_consensus_signals(consensus_signals)
+                logger.info(f"Saved {saved_count}/{len(consensus_signals)} consensus signals to database")
             
             logger.info(f"Generated {len(consensus_signals)} consensus signals")
             return consensus_signals
@@ -251,9 +260,14 @@ class EnhancedSignalEngine:
                     logger.error(f"Error generating signal for {symbol}: {str(e)}")
                     continue
             
-            # Store signals
+            # Store signals in memory and database
             self.signal_history.extend(generated_signals)
             self._update_active_signals(generated_signals)
+            
+            # Save signals to database
+            if generated_signals:
+                saved_count = self.signal_db.save_signals_batch(generated_signals)
+                logger.info(f"Saved {saved_count}/{len(generated_signals)} signals to database")
             
             logger.info(f"Generated {len(generated_signals)} {strategy_name} signals")
             return generated_signals
@@ -394,6 +408,9 @@ class EnhancedSignalEngine:
     def get_system_status(self) -> Dict:
         """Get comprehensive system status"""
         try:
+            # Get database stats
+            db_stats = self.signal_db.get_database_stats()
+            
             return {
                 'strategies_available': len(self.strategies),
                 'strategy_names': list(self.strategies.keys()),
@@ -401,6 +418,7 @@ class EnhancedSignalEngine:
                 'active_signals': len(self.active_signals),
                 'consensus_signals': len([s for s in self.active_signals if s.get('strategy') == 'consensus']),
                 'signal_history_count': len(self.signal_history),
+                'database_stats': db_stats,
                 'shariah_filter_type': 'SmartShariahFilter',
                 'last_signal_generated': self.signal_history[-1]['generated_at'] if self.signal_history else None,
                 'system_ready': True,
@@ -410,6 +428,44 @@ class EnhancedSignalEngine:
         except Exception as e:
             logger.error(f"Error getting system status: {str(e)}")
             return {'error': str(e), 'system_ready': False}
+    
+    def get_active_signals(self, strategy: Optional[str] = None) -> List[Dict]:
+        """Get active signals from database"""
+        try:
+            return self.signal_db.get_active_signals(strategy=strategy)
+        except Exception as e:
+            logger.error(f"Error getting active signals: {str(e)}")
+            return []
+    
+    def get_strategy_performance(self, strategy: str, days: int = 30) -> Dict:
+        """Get strategy performance from database"""
+        try:
+            return self.signal_db.get_strategy_performance(strategy, days)
+        except Exception as e:
+            logger.error(f"Error getting strategy performance: {str(e)}")
+            return {'strategy': strategy, 'error': str(e)}
+    
+    def get_consensus_signals_db(self, days: int = 7) -> List[Dict]:
+        """Get recent consensus signals from database"""
+        try:
+            return self.signal_db.get_consensus_signals(days)
+        except Exception as e:
+            logger.error(f"Error getting consensus signals: {str(e)}")
+            return []
+    
+    def get_signal_performance(self, signal_id: str) -> Dict:
+        """Get performance tracking for a specific signal"""
+        try:
+            # This would need to be implemented with real-time price tracking
+            # For now, return basic info
+            return {
+                'signal_id': signal_id,
+                'status': 'tracking_not_implemented',
+                'message': 'Real-time performance tracking will be implemented in next phase'
+            }
+        except Exception as e:
+            logger.error(f"Error getting signal performance: {str(e)}")
+            return {'error': str(e)}
 
 # Example usage and testing
 if __name__ == "__main__":
