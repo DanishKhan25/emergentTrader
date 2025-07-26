@@ -43,7 +43,7 @@ except Exception as e:
     print(json.dumps({"success": False, "error": str(e)}))
 `
     
-    const pythonProcess = spawn('/root/.venv/bin/python3', ['-c', pythonScript], { cwd: '/app/python_backend' })
+    const pythonProcess = spawn('python3', ['-c', pythonScript], { cwd: '/app/python_backend' })
     let output = ''
     let error = ''
     
