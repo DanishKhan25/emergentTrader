@@ -101,3 +101,122 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: "Test and validate the core signal generation functionality of EmergentTrader platform. The system should generate trading signals using the momentum strategy, ensuring the Shariah compliance filter works correctly, and that the backend API can successfully communicate with the Next.js frontend."
+
+backend:
+  - task: "Python Backend API Handler"
+    implemented: true
+    working: "NA"  # Need to test
+    file: "python_backend/api_handler.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "API handler exists and routes are implemented, but needs testing to verify signal generation works"
+
+  - task: "Signal Engine Core Module"
+    implemented: true
+    working: "NA"  # Need to test
+    file: "python_backend/core/signal_engine.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Signal engine implemented with momentum strategy integration, needs testing for actual signal generation"
+
+  - task: "Momentum Strategy Implementation"
+    implemented: true
+    working: "NA"  # Need to test
+    file: "python_backend/core/strategies/momentum_strategy.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Momentum strategy logic implemented, needs validation with real data"
+
+  - task: "Shariah Compliance Filter"
+    implemented: true
+    working: "NA"  # Need to test
+    file: "python_backend/core/shariah_filter.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Shariah filter implemented with business and financial ratio checks, needs testing"
+
+  - task: "YFinance Data Fetcher"
+    implemented: true
+    working: "NA"  # Need to test
+    file: "python_backend/services/yfinance_fetcher.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Data fetcher implemented with NSE stock data and technical indicators, needs validation"
+
+  - task: "Backtest Engine"
+    implemented: true
+    working: "NA"  # Need to test
+    file: "python_backend/core/backtest_engine.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Backtest engine implemented with comprehensive trade execution logic, lower priority for initial testing"
+
+frontend:
+  - task: "Next.js API Route Handler"
+    implemented: true
+    working: "NA"  # Need to test
+    file: "app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "API routes implemented to proxy requests to Python backend, needs integration testing"
+
+  - task: "Trading Dashboard UI"
+    implemented: true
+    working: "NA"  # Need to test
+    file: "app/page.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Dashboard UI implemented with signal display and backtest tabs, needs testing with real data"
+
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 1
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "Signal Generation End-to-End Test"
+    - "Python Backend API Handler Validation"
+    - "YFinance Data Fetcher Functionality"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: "Initial test structure created. Planning to test backend signal generation functionality first, then frontend integration. Key focus is on validating that the momentum strategy can generate actual trading signals using real NSE stock data."
