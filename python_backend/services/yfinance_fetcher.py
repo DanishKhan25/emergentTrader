@@ -79,12 +79,7 @@ def rate_limit(delay_range=(1, 3), max_retries=3):
 class YFinanceFetcher:
     def __init__(self):
         self.nse_suffix = ".NS"  # NSE suffix for Indian stocks
-        self.session = requests.Session()  # Reuse session for better performance
-        
-        # Set user agent to avoid blocking
-        self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        })
+        # Remove custom session - let yfinance handle it internally
         
     @rate_limit(delay_range=(0.5, 2), max_retries=3)
     def get_nse_stock_data(self, symbol: str, period: str = "2y", interval: str = "1d") -> pd.DataFrame:
@@ -104,7 +99,8 @@ class YFinanceFetcher:
             if not symbol.endswith(self.nse_suffix):
                 symbol += self.nse_suffix
             
-            ticker = yf.Ticker(symbol, session=self.session)
+            # Let yfinance handle session management
+            ticker = yf.Ticker(symbol)
             data = ticker.history(period=period, interval=interval)
             
             if data.empty:
@@ -172,7 +168,8 @@ class YFinanceFetcher:
             if not symbol.endswith(self.nse_suffix):
                 symbol += self.nse_suffix
             
-            ticker = yf.Ticker(symbol, session=self.session)
+            # Let yfinance handle session management
+            ticker = yf.Ticker(symbol)
             info = ticker.info
             
             # Extract key fundamental metrics with safe defaults
