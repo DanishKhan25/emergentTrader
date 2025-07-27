@@ -113,9 +113,54 @@ class SignalDatabase:
             conn.commit()
             logger.info("Database tables created/verified successfully")
     
-    def save_signal(self, signal: Dict[str, Any]) -> bool:
-        """Save a single signal to database"""
+    def check_duplicate_signal(self, symbol: str, target_price: float, stop_loss: float, strategy: str = None) -> bool:
+        """Check if a signal with same symbol, target, and stop loss already exists"""
         try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                # Check for active signals with same symbol, target, and stop loss
+                query = '''
+                    SELECT COUNT(*) FROM signals 
+                    WHERE symbol = ? 
+                    AND target_price = ? 
+                    AND stop_loss = ? 
+                    AND status = 'ACTIVE'
+                '''
+                params = [symbol, target_price, stop_loss]
+                
+                # Optionally exclude same strategy (allow different strategies with same levels)
+                if strategy:
+                    query += ' AND strategy != ?'
+                    params.append(strategy)
+                
+                cursor.execute(query, params)
+                count = cursor.fetchone()[0]
+                
+                if count > 0:
+                    logger.info(f"Duplicate signal detected for {symbol} with target {target_price} and SL {stop_loss}")
+                    return True
+                    
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error checking duplicate signal: {str(e)}")
+            return False
+
+    def save_signal(self, signal: Dict[str, Any]) -> bool:
+        """Save a single signal to database with duplicate detection"""
+        try:
+            symbol = signal['symbol']
+            target_price = signal.get('target_price')
+            stop_loss = signal.get('stop_loss')
+            strategy = signal['strategy']
+            
+            # Check for duplicates if target and stop loss are provided
+            if target_price and stop_loss:
+                if self.check_duplicate_signal(symbol, target_price, stop_loss, strategy):
+                    logger.warning(f"Skipping duplicate signal for {symbol} (Target: {target_price}, SL: {stop_loss})")
+                    return False
+            
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 
@@ -152,15 +197,39 @@ class SignalDatabase:
             logger.error(f"Error saving signal: {str(e)}")
             return False
     
-    def save_signals_batch(self, signals: List[Dict[str, Any]]) -> int:
-        """Save multiple signals in batch"""
+    def save_signals_batch(self, signals: List[Dict[str, Any]]) -> Dict[str, int]:
+        """Save multiple signals in batch with duplicate tracking"""
         saved_count = 0
-        for signal in signals:
-            if self.save_signal(signal):
-                saved_count += 1
+        duplicate_count = 0
+        error_count = 0
         
-        logger.info(f"Batch saved: {saved_count}/{len(signals)} signals")
-        return saved_count
+        for signal in signals:
+            try:
+                if self.save_signal(signal):
+                    saved_count += 1
+                else:
+                    # Check if it was a duplicate or error
+                    symbol = signal['symbol']
+                    target_price = signal.get('target_price')
+                    stop_loss = signal.get('stop_loss')
+                    strategy = signal['strategy']
+                    
+                    if target_price and stop_loss and self.check_duplicate_signal(symbol, target_price, stop_loss, strategy):
+                        duplicate_count += 1
+                    else:
+                        error_count += 1
+            except Exception as e:
+                logger.error(f"Error in batch save for signal: {str(e)}")
+                error_count += 1
+        
+        logger.info(f"Batch save complete: {saved_count} saved, {duplicate_count} duplicates skipped, {error_count} errors")
+        
+        return {
+            'saved': saved_count,
+            'duplicates': duplicate_count,
+            'errors': error_count,
+            'total_processed': len(signals)
+        }
     
     def save_consensus_signal(self, consensus_signal: Dict[str, Any]) -> bool:
         """Save a consensus signal (multi-strategy agreement)"""

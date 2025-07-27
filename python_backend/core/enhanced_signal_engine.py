@@ -266,8 +266,13 @@ class EnhancedSignalEngine:
             
             # Save signals to database
             if generated_signals:
-                saved_count = self.signal_db.save_signals_batch(generated_signals)
-                logger.info(f"Saved {saved_count}/{len(generated_signals)} signals to database")
+                save_stats = self.signal_db.save_signals_batch(generated_signals)
+                logger.info(f"Signal save stats: {save_stats['saved']} saved, {save_stats['duplicates']} duplicates skipped, {save_stats['errors']} errors")
+                
+                # Store save statistics for API response
+                self._last_save_stats = save_stats
+            else:
+                self._last_save_stats = {'saved': 0, 'duplicates': 0, 'errors': 0, 'total_processed': 0}
             
             logger.info(f"Generated {len(generated_signals)} {strategy_name} signals")
             return generated_signals

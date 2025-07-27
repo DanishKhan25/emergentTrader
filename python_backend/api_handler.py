@@ -937,6 +937,11 @@ class EmergentTraderAPI:
             if ml_stats['enhanced'] > 0:
                 ml_stats['avg_ml_confidence'] /= ml_stats['enhanced']
             
+            # Get save statistics from signal engine
+            save_stats = getattr(self.signal_engine, '_last_save_stats', {
+                'saved': len(enhanced_signals), 'duplicates': 0, 'errors': 0, 'total_processed': len(enhanced_signals)
+            })
+            
             return {
                 'success': True,
                 'data': {
@@ -947,6 +952,7 @@ class EmergentTraderAPI:
                     'min_confidence': min_confidence,
                     'ml_enhanced': enable_ml,
                     'ml_stats': ml_stats if enable_ml else None,
+                    'save_stats': save_stats,  # Include duplicate detection stats
                     'generated_at': datetime.now().isoformat()
                 }
             }
