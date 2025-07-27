@@ -570,6 +570,25 @@ class EmergentTraderAPI:
         except Exception as e:
             logger.error(f"Error sending report: {str(e)}")
             return {'success': False, 'error': str(e)}
+    
+    def get_today_signals(self) -> Dict:
+        """Alias for get_todays_signals for frontend compatibility"""
+        return self.get_todays_signals()
+    
+    def get_open_signals(self) -> Dict:
+        """Alias for get_active_signals for frontend compatibility"""
+        return self.get_active_signals()
+    
+    def get_stocks(self, shariah_only: bool = True, limit: int = 100) -> Dict:
+        """Get stocks with optional Shariah filter"""
+        try:
+            if shariah_only:
+                return self.get_shariah_stocks()
+            else:
+                return self.get_all_stocks()
+        except Exception as e:
+            logger.error(f"Error getting stocks: {str(e)}")
+            return {'success': False, 'error': str(e)}
 
 
 def handle_api_request(endpoint: str, method: str = 'GET', params: Optional[Dict] = None) -> Dict:
