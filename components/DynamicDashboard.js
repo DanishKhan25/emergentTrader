@@ -36,6 +36,7 @@ import {
   WifiOff,
   Zap,
   Bell,
+  Brain,
 } from "lucide-react";
 
 export default function DynamicDashboard() {
@@ -57,7 +58,6 @@ export default function DynamicDashboard() {
     // Actions
     refreshData,
     generateSignals,
-    generateBatchSignals,
     updateSettings,
     clearError,
   } = useData();
@@ -263,9 +263,13 @@ export default function DynamicDashboard() {
 
         {/* Main Dashboard Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4 max-w-2xl">
+          <TabsList className="grid w-full grid-cols-5 max-w-3xl">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="signals">Live Signals</TabsTrigger>
+            <TabsTrigger value="ai-predictions" className="flex items-center gap-2">
+              <Brain className="h-4 w-4" />
+              AI Predictions
+            </TabsTrigger>
             <TabsTrigger value="performance">Performance</TabsTrigger>
             <TabsTrigger value="system">System</TabsTrigger>
           </TabsList>
@@ -484,6 +488,11 @@ export default function DynamicDashboard() {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          {/* AI Predictions Tab */}
+          <TabsContent value="ai-predictions" className="space-y-6">
+            <AIPricePrediction />
           </TabsContent>
 
           {/* Performance Tab */}
