@@ -104,3 +104,5 @@ nse_*.json
 ml_demo_results_*.json
 comprehensive_test_report.json
 cleanup_summary_*.txt
+
+*.db
