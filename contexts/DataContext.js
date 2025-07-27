@@ -160,8 +160,8 @@ export function DataProvider({ children }) {
         strategiesResponse,
         systemHealthResponse
       ] = await Promise.allSettled([
-        apiService.getStocks(false),
-        apiService.getStocks(true),
+        apiService.getStocks(false, true, 200), // All stocks with prices, limited to 200 for performance
+        apiService.getStocks(true, true), // Shariah stocks with prices
         apiService.getTodaySignals(),
         apiService.getOpenSignals(),
         apiService.getPerformanceSummary(),
@@ -220,9 +220,17 @@ export function DataProvider({ children }) {
 
       if (dataTypes.length === 0 || dataTypes.includes('stocks')) {
         refreshPromises.push(
-          apiService.getStocks(false).then(response => {
+          apiService.getStocks(false, true, 200).then(response => {
             if (response.success) {
               dispatch({ type: ActionTypes.UPDATE_STOCKS, payload: response.data?.stocks || [] })
+            }
+          })
+        )
+
+        refreshPromises.push(
+          apiService.getStocks(true, true).then(response => {
+            if (response.success) {
+              dispatch({ type: ActionTypes.UPDATE_SHARIAH_STOCKS, payload: response.data?.stocks || [] })
             }
           })
         )

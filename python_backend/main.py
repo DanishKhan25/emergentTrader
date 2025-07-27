@@ -187,20 +187,30 @@ async def get_stocks(shariah_only: bool = True, limit: int = 100):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/stocks/all")
-async def get_all_stocks(limit: int = 100):
-    """Get all stocks in universe"""
+async def get_all_stocks(include_prices: bool = True, limit: int = None):
+    """Get all stocks in universe with optional price data"""
     try:
-        result = api_handler.get_all_stocks()
+        result = api_handler.get_all_stocks(include_prices=include_prices, limit=limit)
         return result
     except Exception as e:
         logger.error(f"Error getting all stocks: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/stocks/shariah")
-async def get_shariah_stocks_alt():
-    """Get Shariah-compliant stock universe (alternative endpoint)"""
+@app.get("/stocks/fast")
+async def get_stocks_fast(limit: int = 100, include_prices: bool = True):
+    """Get limited stocks with price data for better performance"""
     try:
-        result = api_handler.get_shariah_stocks()
+        result = api_handler.get_all_stocks(include_prices=include_prices, limit=limit)
+        return result
+    except Exception as e:
+        logger.error(f"Error getting stocks fast: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/stocks/shariah")
+async def get_shariah_stocks_alt(force_refresh: bool = False, include_prices: bool = True):
+    """Get Shariah-compliant stock universe with price data"""
+    try:
+        result = api_handler.get_shariah_stocks(force_refresh=force_refresh, include_prices=include_prices)
         return result
     except Exception as e:
         logger.error(f"Error getting Shariah stocks: {str(e)}")

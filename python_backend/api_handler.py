@@ -301,30 +301,64 @@ class EmergentTraderAPI:
             logger.error(f"Error getting backtest results: {str(e)}")
             return {'success': False, 'error': str(e)}
     
-    def get_shariah_stocks(self, force_refresh: bool = False) -> Dict:
-        """Get Shariah compliant stock universe with enhanced filtering"""
+    def get_shariah_stocks(self, force_refresh: bool = False, include_prices: bool = True) -> Dict:
+        """Get Shariah compliant stock universe with enhanced filtering and price data"""
         try:
             if not self.signal_engine:
                 return {'success': False, 'error': 'Signal engine not initialized'}
             
-            logger.info(f"Fetching Shariah compliant stocks (force_refresh: {force_refresh})")
+            logger.info(f"Fetching Shariah compliant stocks (force_refresh: {force_refresh}, include_prices: {include_prices})")
             stocks = self.signal_engine.get_shariah_universe(force_refresh)
             
             # Get additional info for each stock
             stock_details = []
             for symbol in stocks:  # Process all Shariah stocks, not just first 20
                 try:
-                    info = self.signal_engine.data_fetcher.get_stock_info(symbol)
-                    if info:
+                    if include_prices:
+                        info = self.signal_engine.data_fetcher.get_stock_info(symbol)
+                        if info:
+                            stock_details.append({
+                                'symbol': symbol,
+                                'name': info.get('company_name', ''),
+                                'company_name': info.get('company_name', ''),
+                                'sector': info.get('sector', ''),
+                                'industry': info.get('industry', ''),
+                                'market_cap': info.get('market_cap', 0),
+                                'marketCap': info.get('market_cap', 0),  # For frontend compatibility
+                                'price': info.get('current_price', 0),
+                                'current_price': info.get('current_price', 0),
+                                'change': info.get('price_change', 0),
+                                'changePercent': info.get('price_change_percent', 0),
+                                'volume': info.get('volume', 0),
+                                'pe_ratio': info.get('pe_ratio', 0),
+                                'shariah_compliant': True,
+                                'last_updated': datetime.now().isoformat()
+                            })
+                    else:
+                        # Basic info without prices
                         stock_details.append({
                             'symbol': symbol,
-                            'company_name': info.get('company_name', ''),
-                            'sector': info.get('sector', ''),
-                            'market_cap': info.get('market_cap', 0),
-                            'current_price': info.get('current_price', 0)
+                            'name': symbol,
+                            'shariah_compliant': True,
+                            'last_updated': datetime.now().isoformat()
                         })
-                except:
-                    continue
+                except Exception as e:
+                    logger.error(f"Error getting info for {symbol}: {str(e)}")
+                    # Add basic entry
+                    stock_details.append({
+                        'symbol': symbol,
+                        'name': symbol,
+                        'price': 0,
+                        'change': 0,
+                        'changePercent': 0,
+                        'volume': 0,
+                        'marketCap': 0,
+                        'pe_ratio': 0,
+                        'sector': 'Unknown',
+                        'industry': 'Unknown',
+                        'shariah_compliant': True,
+                        'last_updated': datetime.now().isoformat()
+                    })
             
             return {
                 'success': True,
@@ -333,6 +367,7 @@ class EmergentTraderAPI:
                     'total_symbols': len(stocks),
                     'detailed_count': len(stock_details),
                     'force_refresh_used': force_refresh,
+                    'includes_prices': include_prices,
                     'updated_at': datetime.now().isoformat()
                 }
             }
@@ -379,13 +414,91 @@ class EmergentTraderAPI:
             logger.error(f"Error fetching Shariah compliance summary: {str(e)}")
             return {'success': False, 'error': str(e)}
     
-    def get_all_stocks(self) -> Dict:
-        """Get all available stocks in NSE universe"""
+    def get_all_stocks(self, include_prices: bool = True, limit: int = None) -> Dict:
+        """
+        Get all available stocks in NSE universe with optional price data
+        
+        Args:
+            include_prices: Whether to fetch real-time price data
+            limit: Optional limit on number of stocks (for performance)
+        """
         try:
             if not self.signal_engine:
                 return {'success': False, 'error': 'Signal engine not initialized'}
             
             all_stocks = self.signal_engine.data_fetcher.get_nse_universe()
+            
+            # Apply limit if specified
+            if limit:
+                all_stocks = all_stocks[:limit]
+            
+            # Enhance with price data if requested
+            if include_prices:
+                enhanced_stocks = []
+                
+                logger.info(f"Fetching price data for {len(all_stocks)} stocks...")
+                
+                for i, stock in enumerate(all_stocks):
+                    try:
+                        symbol = stock.get('symbol', '')
+                        if symbol:
+                            # Get stock info which includes price data
+                            stock_info = self.signal_engine.data_fetcher.get_stock_info(symbol)
+                            
+                            if stock_info:
+                                # Merge basic stock data with price data
+                                enhanced_stock = stock.copy()
+                                enhanced_stock.update({
+                                    'price': stock_info.get('current_price', 0),
+                                    'change': stock_info.get('price_change', 0),
+                                    'changePercent': stock_info.get('price_change_percent', 0),
+                                    'volume': stock_info.get('volume', 0),
+                                    'marketCap': stock_info.get('market_cap', 0),
+                                    'pe_ratio': stock_info.get('pe_ratio', 0),
+                                    'sector': stock_info.get('sector', 'Unknown'),
+                                    'industry': stock_info.get('industry', 'Unknown'),
+                                    'last_updated': datetime.now().isoformat()
+                                })
+                                enhanced_stocks.append(enhanced_stock)
+                            else:
+                                # Add stock without price data
+                                enhanced_stock = stock.copy()
+                                enhanced_stock.update({
+                                    'price': 0,
+                                    'change': 0,
+                                    'changePercent': 0,
+                                    'volume': 0,
+                                    'marketCap': 0,
+                                    'pe_ratio': 0,
+                                    'sector': 'Unknown',
+                                    'industry': 'Unknown',
+                                    'last_updated': datetime.now().isoformat()
+                                })
+                                enhanced_stocks.append(enhanced_stock)
+                        
+                        # Log progress for large datasets
+                        if (i + 1) % 100 == 0:
+                            logger.info(f"Processed {i + 1}/{len(all_stocks)} stocks")
+                            
+                    except Exception as e:
+                        logger.error(f"Error getting price data for {stock.get('symbol', 'Unknown')}: {str(e)}")
+                        # Add stock without price data
+                        enhanced_stock = stock.copy()
+                        enhanced_stock.update({
+                            'price': 0,
+                            'change': 0,
+                            'changePercent': 0,
+                            'volume': 0,
+                            'marketCap': 0,
+                            'pe_ratio': 0,
+                            'sector': 'Unknown',
+                            'industry': 'Unknown',
+                            'last_updated': datetime.now().isoformat()
+                        })
+                        enhanced_stocks.append(enhanced_stock)
+                
+                all_stocks = enhanced_stocks
+                logger.info(f"Successfully enhanced {len(enhanced_stocks)} stocks with price data")
             
             return {
                 'success': True,
@@ -393,6 +506,7 @@ class EmergentTraderAPI:
                     'stocks': all_stocks,
                     'count': len(all_stocks),
                     'market': 'NSE',
+                    'includes_prices': include_prices,
                     'updated_at': datetime.now().isoformat()
                 }
             }
@@ -705,7 +819,14 @@ def handle_api_request(endpoint: str, method: str = 'GET', params: Optional[Dict
         
         elif endpoint == 'stocks/shariah':
             force_refresh = params.get('force_refresh', False)
-            return api.get_shariah_stocks(force_refresh)
+            include_prices = params.get('include_prices', True)
+            return api.get_shariah_stocks(force_refresh, include_prices)
+        
+        elif endpoint == 'stocks/fast':
+            # Fast endpoint with limited stocks and prices for better performance
+            limit = params.get('limit', 100)  # Default to 100 stocks
+            include_prices = params.get('include_prices', True)
+            return api.get_all_stocks(include_prices=include_prices, limit=int(limit))
         
         elif endpoint == 'shariah/refresh' and method == 'POST':
             symbols = params.get('symbols')
@@ -715,7 +836,11 @@ def handle_api_request(endpoint: str, method: str = 'GET', params: Optional[Dict
             return api.get_shariah_compliance_summary()
         
         elif endpoint == 'stocks/all':
-            return api.get_all_stocks()
+            include_prices = params.get('include_prices', True)
+            limit = params.get('limit')
+            if limit:
+                limit = int(limit)
+            return api.get_all_stocks(include_prices=include_prices, limit=limit)
         
         elif endpoint == 'stocks/refresh' and method == 'POST':
             symbols = params.get('symbols')
