@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useData } from '@/contexts/DataContext'
+import MainLayout from '@/components/layout/MainLayout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -121,10 +122,10 @@ export default function DynamicDashboard() {
   )
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="px-6 py-4">
+    <MainLayout>
+      <div className="p-6">
+        {/* Header */}
+        <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Dynamic Dashboard</h1>
@@ -191,9 +192,6 @@ export default function DynamicDashboard() {
             </div>
           </div>
         </div>
-      </header>
-
-      <div className="p-6">
         {/* Error Alert */}
         {error && (
           <Alert className="mb-6 border-destructive">
@@ -555,6 +553,6 @@ export default function DynamicDashboard() {
           </TabsContent>
         </Tabs>
       </div>
-    </div>
+    </MainLayout>
   )
 }
