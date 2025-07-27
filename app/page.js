@@ -1,10 +1,5 @@
-import MainLayout from '@/components/layout/MainLayout'
-import EnhancedDashboard from '@/components/EnhancedDashboard'
+import DynamicDashboard from '@/components/DynamicDashboard'
 
 export default function Home() {
-  return (
-    <MainLayout>
-      <EnhancedDashboard />
-    </MainLayout>
-  )
+  return <DynamicDashboard />
 }

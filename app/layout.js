@@ -1,5 +1,6 @@
 import './globals.css'
 import { Inter } from 'next/font/google'
+import { DataProvider } from '@/contexts/DataContext'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -13,9 +14,11 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className="h-full">
       <body className={`${inter.className} h-full bg-gray-50 antialiased`}>
-        <div className="min-h-full">
-          {children}
-        </div>
+        <DataProvider>
+          <div className="min-h-full">
+            {children}
+          </div>
+        </DataProvider>
       </body>
     </html>
   )
