@@ -33,7 +33,7 @@ const AIPricePrediction = () => {
 
   const fetchTrainedModels = async () => {
     try {
-      const response = await fetch('/api/ai/models/list');
+      const response = await fetch('http://localhost:8000/ai/models/list');
       const data = await response.json();
       if (data.success) {
         setTrainedModels(data.data.models || []);
@@ -53,7 +53,7 @@ const AIPricePrediction = () => {
     setError(null);
 
     try {
-      const response = await fetch('/api/ai/predict', {
+      const response = await fetch('http://localhost:8000/ai/predict', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -89,7 +89,7 @@ const AIPricePrediction = () => {
     setError(null);
 
     try {
-      const response = await fetch('/api/ai/train', {
+      const response = await fetch('http://localhost:8000/ai/train', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -125,7 +125,7 @@ const AIPricePrediction = () => {
     }
 
     try {
-      const response = await fetch(`/api/ai/model/performance/${symbol.toUpperCase()}`);
+      const response = await fetch(`http://localhost:8000/ai/model/performance/${symbol.toUpperCase()}`);
       const data = await response.json();
 
       if (data.success) {
