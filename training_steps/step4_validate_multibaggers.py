@@ -34,7 +34,7 @@ class MultibaggerValidator:
         """Load the 2019 high-confidence signals"""
         print("📊 Loading 2019 high-confidence signals...")
         
-        signals_file = f"{self.signals_dir}/high_confidence_signals_2019.json"
+        signals_file = f"{self.signals_dir}/signals_january_2019.json"
         
         if not os.path.exists(signals_file):
             print(f"❌ Signals file not found: {signals_file}")
@@ -70,6 +70,14 @@ class MultibaggerValidator:
         try:
             signal_date = pd.to_datetime(signal['date'])
             entry_price = signal['price']
+            
+            # Convert both to timezone-naive to avoid comparison issues
+            if stock_data.index.tz is not None:
+                stock_data = stock_data.copy()
+                stock_data.index = stock_data.index.tz_localize(None)
+            
+            if signal_date.tz is not None:
+                signal_date = signal_date.tz_localize(None)
             
             # Find data after signal date
             future_data = stock_data[stock_data.index > signal_date].copy()

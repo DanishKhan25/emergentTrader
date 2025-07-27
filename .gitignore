@@ -85,3 +85,16 @@ agenthub/agents/youtube/db
 android-sdk/ node_modules/@next/swc-linux-arm64-gnu/next-swc.linux-arm64-gnu.node
 node_modules/@next/swc-linux-arm64-musl/next-swc.linux-arm64-musl.node
 node_modules/@next/swc-linux-arm64-gnu/next-swc.linux-arm64-gnu.node
+
+# Raw data directories (can be regenerated)
+training_data_2014_2019/
+testing_data_2019_2025/
+comprehensive_historical_data/
+python_backend/python_backend/data/cache/
+
+# Temporary files
+*.log
+nse_*.json
+ml_demo_results_*.json
+comprehensive_test_report.json
+cleanup_summary_*.txt

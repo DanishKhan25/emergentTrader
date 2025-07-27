@@ -2124,7 +2124,12 @@ if __name__ == "__main__":
     ZYDUSWELL
     """
 
-    # Convert to list
-    symbols_list = [symbol.strip() for symbol in symbols_text.splitlines() if symbol.strip()]
+    # Strip whitespace, split by lines, and format
+    symbols = [f'"{symbol.strip()}.NS"' for symbol in symbols_text.strip().splitlines() if symbol.strip()]
 
-    print(symbols_list)
+    # Join all into a single string, comma-separated
+    result = ", ".join(symbols)
+
+    # Print or use as needed
+    print(result)
+

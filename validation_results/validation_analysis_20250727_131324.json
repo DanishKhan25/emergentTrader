@@ -1,0 +1,53 @@
+{
+  "total_signals": 46,
+  "multibaggers_count": 40,
+  "multibagger_rate": 86.95652173913044,
+  "positive_returns_count": 45,
+  "positive_rate": 97.82608695652173,
+  "multibagger_breakdown": {
+    "20x+": {
+      "count": 11,
+      "percentage": 23.91304347826087
+    },
+    "10x": {
+      "count": 8,
+      "percentage": 17.391304347826086
+    },
+    "5x": {
+      "count": 10,
+      "percentage": 21.73913043478261
+    },
+    "3x": {
+      "count": 5,
+      "percentage": 10.869565217391305
+    },
+    "2x": {
+      "count": 6,
+      "percentage": 13.043478260869565
+    },
+    "1.5x": {
+      "count": 2,
+      "percentage": 4.3478260869565215
+    },
+    "Positive": {
+      "count": 4,
+      "percentage": 8.695652173913043
+    },
+    "Loss": {
+      "count": 0,
+      "percentage": 0.0
+    }
+  },
+  "performance_stats": {
+    "mean_return": 1828.6082685325666,
+    "median_return": 639.4659103473971,
+    "max_return": 28709.998956918764,
+    "min_return": 0.0,
+    "std_return": 4277.190476339993
+  },
+  "ml_accuracy": {
+    "mean_probability": 0.70046159765557,
+    "median_probability": 0.688715841010519,
+    "correlation_prob_return": 0.16706846981420714
+  }
+}
