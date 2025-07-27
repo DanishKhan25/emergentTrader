@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useData } from '@/contexts/DataContext'
 import MainLayout from '@/components/layout/MainLayout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,6 +9,9 @@ import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Slider } from '@/components/ui/slider'
 import { 
   Target,
   Zap,
@@ -22,7 +25,11 @@ import {
   AlertCircle,
   RefreshCw,
   Filter,
-  BarChart3
+  BarChart3,
+  Settings,
+  Brain,
+  Sparkles,
+  AlertTriangle
 } from 'lucide-react'
 
 export default function DynamicSignalsPage() {
@@ -43,22 +50,193 @@ export default function DynamicSignalsPage() {
   const [generatingSignals, setGeneratingSignals] = useState(false)
   const [filterStatus, setFilterStatus] = useState('all')
   const [sortBy, setSortBy] = useState('confidence')
+  const [signalError, setSignalError] = useState(null)
+  const [minConfidence, setMinConfidence] = useState(0.7)
+  const [maxSymbols, setMaxSymbols] = useState(50)
+  const [showAdvanced, setShowAdvanced] = useState(false)
 
-  // Handle signal generation
+  // Complete strategy definitions with correct backend names
+  const AVAILABLE_STRATEGIES = [
+    {
+      id: 'multibagger',
+      name: 'Multibagger (ML-Enhanced)',
+      description: 'AI-powered multibagger strategy with 87% success rate',
+      icon: Brain,
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-100',
+      holdingPeriod: '6 months to 3 years',
+      focus: '2x, 3x, 5x+ returns',
+      riskLevel: 'Medium-High'
+    },
+    {
+      id: 'momentum',
+      name: 'Momentum Trading',
+      description: 'Momentum-based trading strategy',
+      icon: TrendingUp,
+      color: 'text-green-600',
+      bgColor: 'bg-green-100',
+      holdingPeriod: '1-3 months',
+      focus: 'Trending stocks with strong momentum',
+      riskLevel: 'Medium'
+    },
+    {
+      id: 'swing_trading',
+      name: 'Swing Trading',
+      description: 'Swing trading strategy',
+      icon: Activity,
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-100',
+      holdingPeriod: '1-4 weeks',
+      focus: 'Short to medium-term price swings',
+      riskLevel: 'Medium'
+    },
+    {
+      id: 'breakout',
+      name: 'Breakout Pattern',
+      description: 'Breakout pattern strategy',
+      icon: Zap,
+      color: 'text-yellow-600',
+      bgColor: 'bg-yellow-100',
+      holdingPeriod: '2-8 weeks',
+      focus: 'Stocks breaking key resistance levels',
+      riskLevel: 'Medium-High'
+    },
+    {
+      id: 'mean_reversion',
+      name: 'Mean Reversion',
+      description: 'Mean reversion strategy',
+      icon: TrendingDown,
+      color: 'text-red-600',
+      bgColor: 'bg-red-100',
+      holdingPeriod: '1-6 weeks',
+      focus: 'Oversold stocks likely to bounce',
+      riskLevel: 'Medium'
+    },
+    {
+      id: 'value_investing',
+      name: 'Value Investing',
+      description: 'Value investing strategy',
+      icon: DollarSign,
+      color: 'text-indigo-600',
+      bgColor: 'bg-indigo-100',
+      holdingPeriod: '6 months to 2 years',
+      focus: 'Undervalued stocks with strong fundamentals',
+      riskLevel: 'Low-Medium'
+    },
+    {
+      id: 'fundamental_growth',
+      name: 'Fundamental Growth',
+      description: 'Fundamental growth strategy',
+      icon: BarChart3,
+      color: 'text-emerald-600',
+      bgColor: 'bg-emerald-100',
+      holdingPeriod: '3 months to 2 years',
+      focus: 'Companies with strong growth metrics',
+      riskLevel: 'Medium'
+    },
+    {
+      id: 'sector_rotation',
+      name: 'Sector Rotation',
+      description: 'Sector rotation strategy',
+      icon: RefreshCw,
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-100',
+      holdingPeriod: '1-6 months',
+      focus: 'Rotating between outperforming sectors',
+      riskLevel: 'Medium'
+    },
+    {
+      id: 'low_volatility',
+      name: 'Low Volatility',
+      description: 'Low volatility strategy',
+      icon: CheckCircle,
+      color: 'text-teal-600',
+      bgColor: 'bg-teal-100',
+      holdingPeriod: '3-12 months',
+      focus: 'Stable stocks with consistent returns',
+      riskLevel: 'Low'
+    },
+    {
+      id: 'pivot_cpr',
+      name: 'Pivot CPR',
+      description: 'Pivot CPR strategy',
+      icon: Target,
+      color: 'text-pink-600',
+      bgColor: 'bg-pink-100',
+      holdingPeriod: '1-4 weeks',
+      focus: 'Support/resistance based trading',
+      riskLevel: 'Medium-High'
+    }
+  ]
+
+  // Get strategy info by ID
+  const getStrategyInfo = (strategyId) => {
+    return AVAILABLE_STRATEGIES.find(s => s.id === strategyId) || AVAILABLE_STRATEGIES[0]
+  }
+
+  // Handle signal generation with comprehensive error handling
   const handleGenerateSignals = async () => {
     setGeneratingSignals(true)
+    setSignalError(null)
+    
     try {
-      await generateSignals({
+      const strategyInfo = getStrategyInfo(selectedStrategy)
+      
+      const result = await generateSignals({
         strategy: selectedStrategy,
         shariah_only: settings.shariahOnly,
-        min_confidence: 0.7
+        min_confidence: minConfidence,
+        max_symbols: maxSymbols
       })
+      
+      if (result && result.success === false) {
+        throw new Error(result.error || 'Failed to generate signals')
+      }
+      
+      // Refresh signals data after generation
+      await refreshData(['signals'])
+      
     } catch (error) {
-      console.error('Failed to generate signals:', error)
+      console.error('Signal generation error:', error)
+      
+      // Handle specific error types
+      let errorMessage = 'Failed to generate signals. Please try again.'
+      
+      if (error.message.includes('not found')) {
+        const availableStrategies = AVAILABLE_STRATEGIES.map(s => s.id).join(', ')
+        errorMessage = `Strategy "${selectedStrategy}" not found. Available strategies: ${availableStrategies}`
+      } else if (error.message.includes('rate limit')) {
+        errorMessage = 'Rate limit exceeded. Please wait a moment before generating more signals.'
+      } else if (error.message.includes('timeout')) {
+        errorMessage = 'Request timed out. The server may be busy. Please try again.'
+      } else if (error.message.includes('network')) {
+        errorMessage = 'Network error. Please check your connection and try again.'
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+      
+      setSignalError(errorMessage)
     } finally {
       setGeneratingSignals(false)
     }
   }
+
+  // Clear error when strategy changes
+  useEffect(() => {
+    setSignalError(null)
+  }, [selectedStrategy])
+
+  // Validate strategy selection
+  const isValidStrategy = (strategyId) => {
+    return AVAILABLE_STRATEGIES.some(s => s.id === strategyId)
+  }
+
+  // Auto-correct invalid strategy
+  useEffect(() => {
+    if (!isValidStrategy(selectedStrategy)) {
+      setSelectedStrategy('multibagger')
+    }
+  }, [selectedStrategy])
 
   // Format currency
   const formatCurrency = (value) => {
@@ -225,22 +403,17 @@ export default function DynamicSignalsPage() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Live Trading Signals</h1>
             <p className="text-gray-600 mt-1">
-              AI-powered trading signals with real-time generation and tracking
+              AI-powered trading signals with 10 strategies and ML enhancement
             </p>
           </div>
           <div className="flex items-center space-x-4">
-            <Select value={selectedStrategy} onValueChange={setSelectedStrategy}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Select Strategy" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="multibagger">Multibagger</SelectItem>
-                <SelectItem value="momentum">Momentum</SelectItem>
-                <SelectItem value="swing">Swing Trading</SelectItem>
-                <SelectItem value="breakout">Breakout</SelectItem>
-                <SelectItem value="value">Value Investing</SelectItem>
-              </SelectContent>
-            </Select>
+            <Button 
+              variant="outline"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+            >
+              <Settings className="h-4 w-4 mr-2" />
+              {showAdvanced ? 'Hide' : 'Show'} Advanced
+            </Button>
             
             <Button 
               onClick={() => refreshData(['signals'])}
@@ -250,23 +423,177 @@ export default function DynamicSignalsPage() {
               <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
-            
-            <Button 
-              onClick={handleGenerateSignals}
-              disabled={generatingSignals || isLoading}
-            >
-              <Zap className={`h-4 w-4 mr-2 ${generatingSignals ? 'animate-pulse' : ''}`} />
-              {generatingSignals ? 'Generating...' : 'Generate Signals'}
-            </Button>
           </div>
         </div>
 
-        {/* Error Alert */}
+        {/* Strategy Selection & Generation */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Sparkles className="h-5 w-5 mr-2 text-purple-600" />
+              Signal Generation
+            </CardTitle>
+            <CardDescription>
+              Choose a strategy and generate AI-powered trading signals
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Strategy Grid */}
+            <div>
+              <Label className="text-sm font-medium mb-3 block">Select Trading Strategy</Label>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                {AVAILABLE_STRATEGIES.map((strategy) => {
+                  const Icon = strategy.icon
+                  const isSelected = selectedStrategy === strategy.id
+                  
+                  return (
+                    <button
+                      key={strategy.id}
+                      onClick={() => setSelectedStrategy(strategy.id)}
+                      className={`p-4 rounded-lg border-2 transition-all text-left ${
+                        isSelected
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className={`w-8 h-8 rounded-full ${strategy.bgColor} flex items-center justify-center mb-2`}>
+                        <Icon className={`h-4 w-4 ${strategy.color}`} />
+                      </div>
+                      <h3 className="font-medium text-sm mb-1">{strategy.name}</h3>
+                      <p className="text-xs text-gray-600 line-clamp-2">{strategy.focus}</p>
+                      <div className="mt-2">
+                        <Badge variant="outline" className="text-xs">
+                          {strategy.riskLevel}
+                        </Badge>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Selected Strategy Info */}
+            {selectedStrategy && (
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-start space-x-3">
+                  <div className={`w-10 h-10 rounded-full ${getStrategyInfo(selectedStrategy).bgColor} flex items-center justify-center`}>
+                    {React.createElement(getStrategyInfo(selectedStrategy).icon, {
+                      className: `h-5 w-5 ${getStrategyInfo(selectedStrategy).color}`
+                    })}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-900">{getStrategyInfo(selectedStrategy).name}</h3>
+                    <p className="text-sm text-gray-600 mb-2">{getStrategyInfo(selectedStrategy).description}</p>
+                    <div className="grid grid-cols-3 gap-4 text-xs">
+                      <div>
+                        <span className="text-gray-500">Holding Period:</span>
+                        <p className="font-medium">{getStrategyInfo(selectedStrategy).holdingPeriod}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Focus:</span>
+                        <p className="font-medium">{getStrategyInfo(selectedStrategy).focus}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Risk Level:</span>
+                        <p className="font-medium">{getStrategyInfo(selectedStrategy).riskLevel}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Advanced Settings */}
+            {showAdvanced && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-blue-50 rounded-lg">
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">
+                    Minimum Confidence: {(minConfidence * 100).toFixed(0)}%
+                  </Label>
+                  <Slider
+                    value={[minConfidence]}
+                    onValueChange={(value) => setMinConfidence(value[0])}
+                    min={0.5}
+                    max={0.95}
+                    step={0.05}
+                    className="w-full"
+                  />
+                  <p className="text-xs text-gray-600 mt-1">
+                    Higher confidence = fewer but more reliable signals
+                  </p>
+                </div>
+                
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">
+                    Max Symbols: {maxSymbols}
+                  </Label>
+                  <Slider
+                    value={[maxSymbols]}
+                    onValueChange={(value) => setMaxSymbols(value[0])}
+                    min={10}
+                    max={100}
+                    step={10}
+                    className="w-full"
+                  />
+                  <p className="text-xs text-gray-600 mt-1">
+                    Maximum number of signals to generate
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Generation Button */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2 text-sm text-gray-600">
+                <CheckCircle className="h-4 w-4 text-green-500" />
+                <span>Shariah Filter: {settings.shariahOnly ? 'Enabled' : 'Disabled'}</span>
+              </div>
+              
+              <Button 
+                onClick={handleGenerateSignals}
+                disabled={generatingSignals || isLoading}
+                size="lg"
+              >
+                <Zap className={`h-4 w-4 mr-2 ${generatingSignals ? 'animate-pulse' : ''}`} />
+                {generatingSignals ? 'Generating Signals...' : 'Generate Signals'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Error Alerts */}
         {error && (
           <Alert className="mb-6 border-destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription className="text-destructive">
-              {error}
+              <strong>System Error:</strong> {error}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {signalError && (
+          <Alert className="mb-6 border-orange-500 bg-orange-50">
+            <AlertTriangle className="h-4 w-4 text-orange-600" />
+            <AlertDescription className="text-orange-800">
+              <strong>Signal Generation Error:</strong> {signalError}
+              <div className="mt-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setSignalError(null)}
+                  className="mr-2"
+                >
+                  Dismiss
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleGenerateSignals}
+                  disabled={generatingSignals}
+                >
+                  Retry
+                </Button>
+              </div>
             </AlertDescription>
           </Alert>
         )}
@@ -274,9 +601,19 @@ export default function DynamicSignalsPage() {
         {/* Generation Status */}
         {generatingSignals && (
           <Alert className="mb-6 border-blue-500 bg-blue-50">
-            <Zap className="h-4 w-4 text-blue-600" />
+            <Zap className="h-4 w-4 text-blue-600 animate-pulse" />
             <AlertDescription className="text-blue-800">
-              Generating new {selectedStrategy} signals... This may take a few moments.
+              <div className="flex items-center justify-between">
+                <span>
+                  Generating <strong>{getStrategyInfo(selectedStrategy).name}</strong> signals... 
+                  This may take a few moments.
+                </span>
+                <div className="flex space-x-1">
+                  <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                  <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                </div>
+              </div>
             </AlertDescription>
           </Alert>
         )}

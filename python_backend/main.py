@@ -269,7 +269,7 @@ async def get_strategies():
                 "holding_period": "1-3 months"
             },
             {
-                "name": "swing",
+                "name": "swing_trading",
                 "description": "Swing trading strategy",
                 "focus": "Short to medium-term price swings",
                 "holding_period": "1-4 weeks"
