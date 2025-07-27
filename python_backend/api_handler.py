@@ -263,7 +263,7 @@ class EmergentTraderAPI:
             
             # Get additional info for each stock
             stock_details = []
-            for symbol in stocks[:20]:  # Limit for performance
+            for symbol in stocks:  # Process all Shariah stocks, not just first 20
                 try:
                     info = self.signal_engine.data_fetcher.get_stock_info(symbol)
                     if info:
