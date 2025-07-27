@@ -133,34 +133,34 @@ export default function DynamicDashboard() {
             </div>
             <div className="flex items-center space-x-4">
               {/* Connection Status */}
-              <div className="flex items-center space-x-2">
-                {isConnected ? (
-                  <>
-                    <Wifi className="h-4 w-4 text-green-500" />
-                    <span className="text-sm text-green-600">Connected</span>
-                  </>
-                ) : (
-                  <>
-                    <WifiOff className="h-4 w-4 text-red-500" />
-                    <span className="text-sm text-red-600">Disconnected</span>
-                  </>
-                )}
-              </div>
+              {/*<div className="flex items-center space-x-2">*/}
+              {/*  {isConnected ? (*/}
+              {/*    <>*/}
+              {/*      <Wifi className="h-4 w-4 text-green-500" />*/}
+              {/*      <span className="text-sm text-green-600">Connected</span>*/}
+              {/*    </>*/}
+              {/*  ) : (*/}
+              {/*    <>*/}
+              {/*      <WifiOff className="h-4 w-4 text-red-500" />*/}
+              {/*      <span className="text-sm text-red-600">Disconnected</span>*/}
+              {/*    </>*/}
+              {/*  )}*/}
+              {/*</div>*/}
               
               {/* Last Update */}
-              <div className="flex items-center space-x-2 text-sm text-gray-500">
-                <Clock className="h-4 w-4" />
-                <span>Updated {formatLastUpdate(lastUpdate)}</span>
-              </div>
+              {/*<div className="flex items-center space-x-2 text-sm text-gray-500">*/}
+              {/*  <Clock className="h-4 w-4" />*/}
+              {/*  <span>Updated {formatLastUpdate(lastUpdate)}</span>*/}
+              {/*</div>*/}
               
               {/* Auto Refresh Toggle */}
-              <div className="flex items-center space-x-2">
-                <Switch
-                  checked={settings.autoRefresh}
-                  onCheckedChange={(checked) => handleSettingsUpdate('autoRefresh', checked)}
-                />
-                <span className="text-sm text-gray-600">Auto Refresh</span>
-              </div>
+              {/*<div className="flex items-center space-x-2">*/}
+              {/*  <Switch*/}
+              {/*    checked={settings.autoRefresh}*/}
+              {/*    onCheckedChange={(checked) => handleSettingsUpdate('autoRefresh', checked)}*/}
+              {/*  />*/}
+              {/*  <span className="text-sm text-gray-600">Auto Refresh</span>*/}
+              {/*</div>*/}
               
               {/* Shariah Only Toggle */}
               <div className="flex items-center space-x-2">
@@ -172,14 +172,14 @@ export default function DynamicDashboard() {
               </div>
               
               {/* Manual Refresh */}
-              <Button 
-                variant="outline" 
-                onClick={handleRefresh}
-                disabled={isLoading}
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
+              {/*<Button */}
+              {/*  variant="outline" */}
+              {/*  onClick={handleRefresh}*/}
+              {/*  disabled={isLoading}*/}
+              {/*>*/}
+              {/*  <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />*/}
+              {/*  Refresh*/}
+              {/*</Button>*/}
               
               {/* Generate Signals */}
               <Button 
