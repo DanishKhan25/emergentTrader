@@ -21,11 +21,12 @@ logger = logging.getLogger(__name__)
 class EmailService:
     def __init__(self):
         """Initialize email service with credentials from environment"""
-        self.smtp_server = os.getenv('EMAIL_SMTP_SERVER', 'smtp.gmail.com')
-        self.smtp_port = int(os.getenv('EMAIL_SMTP_PORT', '587'))
-        self.email = os.getenv('EMAIL_ADDRESS')
+        self.smtp_server = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+        self.smtp_port = int(os.getenv('EMAIL_PORT', '587'))
+        self.email = os.getenv('EMAIL_USER') or os.getenv('EMAIL_FROM')
         self.password = os.getenv('EMAIL_PASSWORD')
-        self.recipient_emails = os.getenv('EMAIL_RECIPIENTS', '').split(',')
+        self.from_email = os.getenv('EMAIL_FROM') or self.email
+        self.recipient_emails = os.getenv('EMAIL_RECIPIENTS', '').split(',') if os.getenv('EMAIL_RECIPIENTS') else []
         
         if not self.email or not self.password:
             logger.warning("Email credentials not configured")
@@ -56,7 +57,7 @@ class EmailService:
         try:
             # Create message
             msg = MIMEMultipart('alternative')
-            msg['From'] = self.email
+            msg['From'] = self.from_email
             msg['Subject'] = subject
             
             # Use provided recipients or default
@@ -197,7 +198,7 @@ EmergentTrader Team
             </html>
             """
             
-            return self.send_email(subject, body, html_body)
+            return self.send_email(subject, body, html_body, recipients=[self.email])
             
         except Exception as e:
             logger.error(f"Error sending signal alert email: {str(e)}")
