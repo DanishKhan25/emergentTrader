@@ -6,12 +6,13 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { 
-  BarChart3, 
-  TrendingUp, 
-  Target, 
-  Database, 
-  Settings, 
+import NotificationBell from '@/components/notifications/NotificationBell'
+import {
+  BarChart3,
+  TrendingUp,
+  Target,
+  Database,
+  Settings,
   Menu,
   X,
   Home,
@@ -22,7 +23,8 @@ import {
   User,
   LogOut,
   Wifi,
-  WifiOff
+  WifiOff,
+  TestTube
 } from 'lucide-react'
 
 const navigation = [
@@ -31,7 +33,9 @@ const navigation = [
   { name: 'Signals', href: '/signals', icon: Target },
   { name: 'Strategies', href: '/strategies', icon: TrendingUp },
   { name: 'Portfolio', href: '/portfolio', icon: Briefcase },
+  { name: 'Backtest', href: '/backtest', icon: TestTube },
   { name: 'Analytics', href: '/analytics', icon: PieChart },
+  { name: 'Notifications', href: '/notifications', icon: Bell },
   { name: 'Settings', href: '/settings', icon: Settings },
 ]
 
@@ -224,10 +228,7 @@ export default function MainLayout({ children }) {
                 </div>
               </div>
               
-              <Button variant="ghost" size="sm" className="relative">
-                <Bell className="h-5 w-5" />
-                <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full"></span>
-              </Button>
+              <NotificationBell />
               
               <Button variant="ghost" size="sm">
                 <User className="h-5 w-5" />

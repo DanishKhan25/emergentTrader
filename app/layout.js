@@ -1,6 +1,8 @@
 import './globals.css'
 import { Inter } from 'next/font/google'
 import { DataProvider } from '@/contexts/DataContext'
+import NotificationProvider from '@/components/notifications/NotificationProvider'
+import { Toaster } from 'sonner'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -15,9 +17,17 @@ export default function RootLayout({ children }) {
     <html lang="en" className="h-full">
       <body className={`${inter.className} h-full bg-gray-50 antialiased`}>
         <DataProvider>
-          <div className="min-h-full">
-            {children}
-          </div>
+          <NotificationProvider>
+            <div className="min-h-full">
+              {children}
+            </div>
+            <Toaster 
+              position="top-right"
+              richColors
+              closeButton
+              duration={5000}
+            />
+          </NotificationProvider>
         </DataProvider>
       </body>
     </html>
