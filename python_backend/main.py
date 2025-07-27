@@ -27,6 +27,14 @@ from core.enhanced_signal_engine import EnhancedSignalEngine
 from core.enhanced_shariah_filter import EnhancedShariahFilter
 from core.backtest_engine import BacktestEngine
 
+# Import AI prediction endpoints
+try:
+    from ai_prediction_endpoints import router as ai_router
+    AI_PREDICTIONS_AVAILABLE = True
+except ImportError as e:
+    print(f"AI Predictions not available: {e}")
+    AI_PREDICTIONS_AVAILABLE = False
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -51,6 +59,13 @@ app.add_middleware(
 
 # Initialize API handler
 api_handler = EmergentTraderAPI()
+
+# Include AI prediction endpoints if available
+if AI_PREDICTIONS_AVAILABLE:
+    app.include_router(ai_router)
+    logger.info("AI Price Prediction endpoints enabled")
+else:
+    logger.warning("AI Price Prediction endpoints not available")
 
 # WebSocket Connection Manager
 class ConnectionManager:
