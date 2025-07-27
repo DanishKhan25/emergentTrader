@@ -322,6 +322,23 @@ async def get_strategies():
         logger.error(f"Error getting strategies: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/ml/performance")
+async def get_ml_performance():
+    """Get ML performance metrics for all strategies"""
+    try:
+        from ml.ml_strategy_enhancer import get_ml_performance_summary
+        performance_data = get_ml_performance_summary()
+        return {
+            "success": True,
+            "data": performance_data
+        }
+    except Exception as e:
+        logger.error(f"Error getting ML performance: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
 @app.get("/signals/open")
 async def get_open_signals():
     """Get currently open trading signals"""

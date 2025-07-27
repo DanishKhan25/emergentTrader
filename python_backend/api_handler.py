@@ -14,6 +14,7 @@ from typing import Dict, List, Optional
 sys.path.append(os.path.dirname(__file__))
 
 from core.enhanced_signal_engine import EnhancedSignalEngine
+from ml.ml_strategy_enhancer import enhance_signal_with_ml, get_ml_performance_summary
 import logging
 
 # Configure logging
@@ -31,18 +32,20 @@ class EmergentTraderAPI:
             self.signal_engine = None
     
     def generate_signals(self, strategy: str = 'momentum', symbols: Optional[List[str]] = None, 
-                        shariah_only: bool = True, min_confidence: float = 0.6) -> Dict:
+                        shariah_only: bool = True, min_confidence: float = 0.6, 
+                        enable_ml: bool = True) -> Dict:
         """
-        Generate trading signals
+        Generate trading signals with ML enhancement
         
         Args:
             strategy: Strategy name to use
             symbols: Optional list of symbols (defaults to Shariah universe)
             shariah_only: Whether to use only Shariah-compliant stocks
             min_confidence: Minimum confidence threshold for signals
+            enable_ml: Whether to enable ML enhancement
             
         Returns:
-            API response with signals
+            API response with ML-enhanced signals
         """
         try:
             if not self.signal_engine:
@@ -56,7 +59,9 @@ class EmergentTraderAPI:
                     'error': f'Strategy "{strategy}" not found. Available strategies: {available_strategies}'
                 }
             
-            logger.info(f"Generating signals using {strategy} strategy (shariah_only={shariah_only}, min_confidence={min_confidence})")
+            logger.info(f"Generating {'ML-enhanced ' if enable_ml else ''}{strategy} signals (shariah_only={shariah_only}, min_confidence={min_confidence})")
+            
+            # Generate base signals
             signals = self.signal_engine.generate_signals(
                 symbols=symbols, 
                 strategy_name=strategy,
@@ -64,14 +69,58 @@ class EmergentTraderAPI:
                 min_confidence=min_confidence
             )
             
+            # Enhance signals with ML if enabled
+            enhanced_signals = []
+            ml_stats = {'enhanced': 0, 'failed': 0, 'avg_ml_confidence': 0}
+            
+            for signal in signals:
+                try:
+                    if enable_ml:
+                        # Get stock data for ML enhancement
+                        symbol = signal.get('symbol', '')
+                        stock_data = self.signal_engine.data_fetcher.get_stock_info(symbol) if symbol else {}
+                        
+                        # Get price data (simplified - in production, this should be cached)
+                        price_data = None
+                        try:
+                            import yfinance as yf
+                            ticker = yf.Ticker(f"{symbol}.NS")
+                            price_data = ticker.history(period="3mo")
+                        except:
+                            pass
+                        
+                        # Enhance with ML
+                        enhanced_signal = enhance_signal_with_ml(strategy, signal, stock_data, price_data)
+                        enhanced_signals.append(enhanced_signal)
+                        
+                        # Update ML stats
+                        if enhanced_signal.get('ml_enhanced', False):
+                            ml_stats['enhanced'] += 1
+                            ml_stats['avg_ml_confidence'] += enhanced_signal.get('ml_confidence', 0)
+                        else:
+                            ml_stats['failed'] += 1
+                    else:
+                        enhanced_signals.append(signal)
+                        
+                except Exception as e:
+                    logger.error(f"Error enhancing signal for {signal.get('symbol', 'Unknown')}: {str(e)}")
+                    enhanced_signals.append(signal)
+                    ml_stats['failed'] += 1
+            
+            # Calculate average ML confidence
+            if ml_stats['enhanced'] > 0:
+                ml_stats['avg_ml_confidence'] /= ml_stats['enhanced']
+            
             return {
                 'success': True,
                 'data': {
-                    'signals': signals,
-                    'count': len(signals),
+                    'signals': enhanced_signals,
+                    'count': len(enhanced_signals),
                     'strategy': strategy,
                     'shariah_only': shariah_only,
                     'min_confidence': min_confidence,
+                    'ml_enhanced': enable_ml,
+                    'ml_stats': ml_stats if enable_ml else None,
                     'generated_at': datetime.now().isoformat()
                 }
             }
@@ -617,7 +666,8 @@ def handle_api_request(endpoint: str, method: str = 'GET', params: Optional[Dict
             symbols = params.get('symbols')
             shariah_only = params.get('shariah_only', True)
             min_confidence = params.get('min_confidence', 0.6)
-            return api.generate_signals(strategy, symbols, shariah_only, min_confidence)
+            enable_ml = params.get('enable_ml', True)
+            return api.generate_signals(strategy, symbols, shariah_only, min_confidence, enable_ml)
         
         elif endpoint == 'signals/generate/multi' and method == 'POST':
             strategies = params.get('strategies')
@@ -628,6 +678,12 @@ def handle_api_request(endpoint: str, method: str = 'GET', params: Optional[Dict
         
         elif endpoint == 'strategies/available':
             return api.get_available_strategies()
+        
+        elif endpoint == 'ml/performance':
+            return {
+                'success': True,
+                'data': get_ml_performance_summary()
+            }
         
         elif endpoint == 'signals/active' or endpoint == 'signals/open':
             strategy = params.get('strategy')

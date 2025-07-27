@@ -66,106 +66,116 @@ export default function DynamicSignalsPage() {
       bgColor: 'bg-purple-100',
       holdingPeriod: '6 months to 3 years',
       focus: '2x, 3x, 5x+ returns',
-      riskLevel: 'Medium-High'
+      riskLevel: 'Medium-High',
+      mlEnhanced: true
     },
     {
       id: 'momentum',
-      name: 'Momentum Trading',
-      description: 'Momentum-based trading strategy',
+      name: 'Momentum Trading (ML-Enhanced)',
+      description: 'ML-enhanced momentum-based trading strategy',
       icon: TrendingUp,
       color: 'text-green-600',
       bgColor: 'bg-green-100',
       holdingPeriod: '1-3 months',
       focus: 'Trending stocks with strong momentum',
-      riskLevel: 'Medium'
+      riskLevel: 'Medium',
+      mlEnhanced: true
     },
     {
       id: 'swing_trading',
-      name: 'Swing Trading',
-      description: 'Swing trading strategy',
+      name: 'Swing Trading (ML-Enhanced)',
+      description: 'ML-enhanced swing trading strategy',
       icon: Activity,
       color: 'text-blue-600',
       bgColor: 'bg-blue-100',
       holdingPeriod: '1-4 weeks',
       focus: 'Short to medium-term price swings',
-      riskLevel: 'Medium'
+      riskLevel: 'Medium',
+      mlEnhanced: true
     },
     {
       id: 'breakout',
-      name: 'Breakout Pattern',
-      description: 'Breakout pattern strategy',
+      name: 'Breakout Pattern (ML-Enhanced)',
+      description: 'ML-enhanced breakout pattern strategy',
       icon: Zap,
       color: 'text-yellow-600',
       bgColor: 'bg-yellow-100',
       holdingPeriod: '2-8 weeks',
       focus: 'Stocks breaking key resistance levels',
-      riskLevel: 'Medium-High'
+      riskLevel: 'Medium-High',
+      mlEnhanced: true
     },
     {
       id: 'mean_reversion',
-      name: 'Mean Reversion',
-      description: 'Mean reversion strategy',
+      name: 'Mean Reversion (ML-Enhanced)',
+      description: 'ML-enhanced mean reversion strategy',
       icon: TrendingDown,
       color: 'text-red-600',
       bgColor: 'bg-red-100',
       holdingPeriod: '1-6 weeks',
       focus: 'Oversold stocks likely to bounce',
-      riskLevel: 'Medium'
+      riskLevel: 'Medium',
+      mlEnhanced: true
     },
     {
       id: 'value_investing',
-      name: 'Value Investing',
-      description: 'Value investing strategy',
+      name: 'Value Investing (ML-Enhanced)',
+      description: 'ML-enhanced value investing strategy',
       icon: DollarSign,
       color: 'text-indigo-600',
       bgColor: 'bg-indigo-100',
       holdingPeriod: '6 months to 2 years',
       focus: 'Undervalued stocks with strong fundamentals',
-      riskLevel: 'Low-Medium'
+      riskLevel: 'Low-Medium',
+      mlEnhanced: true
     },
     {
       id: 'fundamental_growth',
-      name: 'Fundamental Growth',
-      description: 'Fundamental growth strategy',
+      name: 'Fundamental Growth (ML-Enhanced)',
+      description: 'ML-enhanced fundamental growth strategy',
       icon: BarChart3,
       color: 'text-emerald-600',
       bgColor: 'bg-emerald-100',
       holdingPeriod: '3 months to 2 years',
       focus: 'Companies with strong growth metrics',
-      riskLevel: 'Medium'
+      riskLevel: 'Medium',
+      mlEnhanced: true
     },
     {
       id: 'sector_rotation',
-      name: 'Sector Rotation',
-      description: 'Sector rotation strategy',
+      name: 'Sector Rotation (ML-Enhanced)',
+      description: 'ML-enhanced sector rotation strategy',
       icon: RefreshCw,
       color: 'text-orange-600',
       bgColor: 'bg-orange-100',
       holdingPeriod: '1-6 months',
       focus: 'Rotating between outperforming sectors',
-      riskLevel: 'Medium'
+      riskLevel: 'Medium',
+      mlEnhanced: true
     },
     {
       id: 'low_volatility',
-      name: 'Low Volatility',
-      description: 'Low volatility strategy',
+      name: 'Low Volatility (ML-Enhanced)',
+      description: 'ML-enhanced low volatility strategy',
       icon: CheckCircle,
       color: 'text-teal-600',
       bgColor: 'bg-teal-100',
       holdingPeriod: '3-12 months',
       focus: 'Stable stocks with consistent returns',
-      riskLevel: 'Low'
+      riskLevel: 'Low',
+      mlEnhanced: true
     },
     {
       id: 'pivot_cpr',
-      name: 'Pivot CPR',
-      description: 'Pivot CPR strategy',
+      name: 'Pivot CPR (ML-Enhanced)',
+      description: 'ML-enhanced pivot CPR strategy',
       icon: Target,
       color: 'text-pink-600',
       bgColor: 'bg-pink-100',
       holdingPeriod: '1-4 weeks',
       focus: 'Support/resistance based trading',
-      riskLevel: 'Medium-High'
+      riskLevel: 'Medium-High',
+      mlEnhanced: true
     }
   ]
 
@@ -304,9 +314,15 @@ export default function DynamicSignalsPage() {
           <div className="text-right">
             {getSignalStatusBadge(signal.status)}
             <div className="mt-2">
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className="text-xs mr-2">
                 {((signal.confidence_score || 0) * 100).toFixed(0)}% Confidence
               </Badge>
+              {signal.ml_enhanced && (
+                <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+                  <Brain className="h-3 w-3 mr-1" />
+                  ML: {((signal.ml_confidence || 0) * 100).toFixed(0)}%
+                </Badge>
+              )}
             </div>
           </div>
         </div>
@@ -377,6 +393,14 @@ export default function DynamicSignalsPage() {
           <div className="p-3 bg-blue-50 rounded-lg mb-4">
             <p className="text-sm text-blue-800">
               <strong>AI Reasoning:</strong> {signal.reasoning}
+            </p>
+          </div>
+        )}
+
+        {signal.ml_reasoning && (
+          <div className="p-3 bg-purple-50 rounded-lg mb-4">
+            <p className="text-sm text-purple-800">
+              <strong>ML Analysis:</strong> {signal.ml_reasoning}
             </p>
           </div>
         )}
@@ -461,10 +485,16 @@ export default function DynamicSignalsPage() {
                       </div>
                       <h3 className="font-medium text-sm mb-1">{strategy.name}</h3>
                       <p className="text-xs text-gray-600 line-clamp-2">{strategy.focus}</p>
-                      <div className="mt-2">
+                      <div className="mt-2 flex flex-wrap gap-1">
                         <Badge variant="outline" className="text-xs">
                           {strategy.riskLevel}
                         </Badge>
+                        {strategy.mlEnhanced && (
+                          <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+                            <Brain className="h-3 w-3 mr-1" />
+                            ML
+                          </Badge>
+                        )}
                       </div>
                     </button>
                   )
