@@ -2125,7 +2125,7 @@ if __name__ == "__main__":
     """
 
     # Strip whitespace, split by lines, and format
-    symbols = [f'"{symbol.strip()}.NS"' for symbol in symbols_text.strip().splitlines() if symbol.strip()]
+    symbols = [f'"{symbol.strip()}"' for symbol in symbols_text.strip().splitlines() if symbol.strip()]
 
     # Join all into a single string, comma-separated
     result = ", ".join(symbols)

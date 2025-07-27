@@ -36,7 +36,6 @@ import {
   WifiOff,
   Zap,
   Bell,
-  Brain,
 } from "lucide-react";
 
 export default function DynamicDashboard() {
@@ -58,6 +57,7 @@ export default function DynamicDashboard() {
     // Actions
     refreshData,
     generateSignals,
+    generateBatchSignals,
     updateSettings,
     clearError,
   } = useData();
@@ -67,14 +67,36 @@ export default function DynamicDashboard() {
 
   // Handle signal generation
   const handleGenerateSignals = async () => {
-    setGeneratingSignals(true);
     try {
-      await generateSignals({
-        strategy:
-          '"multibagger", "momentum", "swing_trading", "breakout", "mean_reversion", "value_investing", "fundamental_growth", "sector_rotation", "low_volatility", "pivot_cpr"',
-        shariah_only: settings.shariahOnly,
-        min_confidence: 0.7,
-      });
+      // Fallback: Generate signals for each strategy individually
+      const allStrategies = [
+        "multibagger",
+        "momentum",
+        "swing_trading",
+        "breakout",
+        "mean_reversion",
+        "value_investing",
+        "fundamental_growth",
+        "sector_rotation",
+        "low_volatility",
+        "pivot_cpr",
+      ];
+
+      // Generate signals for each strategy sequentially to avoid overwhelming the backend
+      for (const strategy of allStrategies) {
+        try {
+          await generateSignals({
+            strategy: strategy,
+            shariah_only: settings.shariahOnly,
+            min_confidence: 0.7,
+          });
+          console.log(`Generated signals for ${strategy}`);
+          // Small delay between requests to prevent rate limiting
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        } catch (error) {
+          console.error(`Failed to generate signals for ${strategy}:`, error);
+        }
+      }
     } catch (error) {
       console.error("Failed to generate signals:", error);
     } finally {
@@ -241,13 +263,9 @@ export default function DynamicDashboard() {
 
         {/* Main Dashboard Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-5 max-w-3xl">
+          <TabsList className="grid w-full grid-cols-4 max-w-2xl">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="signals">Live Signals</TabsTrigger>
-            <TabsTrigger value="ai-predictions" className="flex items-center gap-2">
-              <Brain className="h-4 w-4" />
-              AI Predictions
-            </TabsTrigger>
             <TabsTrigger value="performance">Performance</TabsTrigger>
             <TabsTrigger value="system">System</TabsTrigger>
           </TabsList>
@@ -466,11 +484,6 @@ export default function DynamicDashboard() {
                 </CardContent>
               </Card>
             </div>
-          </TabsContent>
-
-          {/* AI Predictions Tab */}
-          <TabsContent value="ai-predictions" className="space-y-6">
-            <AIPricePrediction />
           </TabsContent>
 
           {/* Performance Tab */}
