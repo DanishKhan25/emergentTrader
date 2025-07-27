@@ -322,28 +322,28 @@ export default function AnalyticsPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <PerformanceCard
             title="Total Signals"
-            value={analytics.overview.totalSignals.toLocaleString()}
+            value={(analytics?.overview?.totalSignals || 0).toLocaleString()}
             change={5.2}
             icon={Target}
             color="blue"
           />
           <PerformanceCard
             title="Success Rate"
-            value={`${analytics.overview.successRate}%`}
+            value={`${analytics?.overview?.successRate || 0}%`}
             change={2.1}
             icon={Award}
             color="green"
           />
           <PerformanceCard
             title="Total Returns"
-            value={formatCurrency(analytics.overview.totalReturn)}
+            value={formatCurrency(analytics?.overview?.totalReturn || 0)}
             change={12.8}
             icon={DollarSign}
             color="purple"
           />
           <PerformanceCard
             title="Avg Return"
-            value={`${analytics.overview.avgReturn}%`}
+            value={`${analytics?.overview?.avgReturn || 0}%`}
             change={-1.3}
             icon={Percent}
             color="orange"
@@ -370,27 +370,27 @@ export default function AnalyticsPage() {
                 <CardContent className="space-y-4">
                   <div className="flex justify-between items-center">
                     <span>Best Return</span>
-                    <span className="font-bold text-green-600">+{analytics.overview.bestReturn}%</span>
+                    <span className="font-bold text-green-600">+{analytics?.overview?.bestReturn || 0}%</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span>Worst Return</span>
-                    <span className="font-bold text-red-600">{analytics.overview.worstReturn}%</span>
+                    <span className="font-bold text-red-600">{analytics?.overview?.worstReturn || 0}%</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span>Avg Holding Period</span>
-                    <span className="font-bold">{analytics.overview.avgHoldingPeriod} months</span>
+                    <span className="font-bold">{analytics?.overview?.avgHoldingPeriod || 0} months</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span>Sharpe Ratio</span>
-                    <span className="font-bold">{analytics.overview.sharpeRatio}</span>
+                    <span className="font-bold">{analytics?.overview?.sharpeRatio || 0}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span>Max Drawdown</span>
-                    <span className="font-bold text-red-600">{analytics.overview.maxDrawdown}%</span>
+                    <span className="font-bold text-red-600">{analytics?.overview?.maxDrawdown || 0}%</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span>Volatility</span>
-                    <span className="font-bold">{analytics.overview.volatility}%</span>
+                    <span className="font-bold">{analytics?.overview?.volatility || 0}%</span>
                   </div>
                 </CardContent>
               </Card>
@@ -401,7 +401,7 @@ export default function AnalyticsPage() {
                   <CardDescription>Best performing signals</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <TopPerformersTable data={analytics.topPerformers.slice(0, 5)} />
+                  <TopPerformersTable data={(analytics?.topPerformers || []).slice(0, 5)} />
                 </CardContent>
               </Card>
             </div>
@@ -414,7 +414,7 @@ export default function AnalyticsPage() {
                 <CardDescription>Performance metrics across all trading strategies</CardDescription>
               </CardHeader>
               <CardContent>
-                <StrategyChart data={analytics.strategyPerformance} />
+                <StrategyChart data={analytics?.strategyPerformance || []} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -426,7 +426,7 @@ export default function AnalyticsPage() {
                 <CardDescription>Returns and signal count by month</CardDescription>
               </CardHeader>
               <CardContent>
-                <MonthlyChart data={analytics.monthlyPerformance} />
+                <MonthlyChart data={analytics?.monthlyPerformance || []} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -438,7 +438,7 @@ export default function AnalyticsPage() {
                 <CardDescription>Performance breakdown by market sectors</CardDescription>
               </CardHeader>
               <CardContent>
-                <SectorAnalysisTable data={analytics.sectorAnalysis} />
+                <SectorAnalysisTable data={analytics?.sectorAnalysis || []} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -454,29 +454,29 @@ export default function AnalyticsPage() {
                   <div className="flex justify-between items-center">
                     <span>Portfolio Risk</span>
                     <Badge className="bg-orange-100 text-orange-800">
-                      {analytics.riskAnalysis.portfolioRisk}
+                      {analytics?.riskAnalysis?.portfolioRisk || 'N/A'}
                     </Badge>
                   </div>
                   <div className="flex justify-between items-center">
                     <span>Diversification Score</span>
-                    <span className="font-bold text-green-600">{analytics.riskAnalysis.diversificationScore}/10</span>
+                    <span className="font-bold text-green-600">{analytics?.riskAnalysis?.diversificationScore || 0}/10</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span>Concentration Risk</span>
                     <Badge className="bg-green-100 text-green-800">
-                      {analytics.riskAnalysis.concentrationRisk}
+                      {analytics?.riskAnalysis?.concentrationRisk || 'N/A'}
                     </Badge>
                   </div>
                   <div className="flex justify-between items-center">
                     <span>Correlation Risk</span>
                     <Badge className="bg-yellow-100 text-yellow-800">
-                      {analytics.riskAnalysis.correlationRisk}
+                      {analytics?.riskAnalysis?.correlationRisk || 'N/A'}
                     </Badge>
                   </div>
                   <div className="flex justify-between items-center">
                     <span>Liquidity Risk</span>
                     <Badge className="bg-green-100 text-green-800">
-                      {analytics.riskAnalysis.liquidityRisk}
+                      {analytics?.riskAnalysis?.liquidityRisk || 'N/A'}
                     </Badge>
                   </div>
                 </CardContent>
@@ -489,7 +489,7 @@ export default function AnalyticsPage() {
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-3">
-                    {analytics.riskAnalysis.recommendations.map((rec, index) => (
+                    {(analytics?.riskAnalysis?.recommendations || []).map((rec, index) => (
                       <li key={index} className="flex items-start space-x-3">
                         <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
                         <span className="text-gray-700">{rec}</span>

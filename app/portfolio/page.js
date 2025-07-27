@@ -346,14 +346,14 @@ export default function PortfolioPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600">Total Value</p>
-                  <p className="text-2xl font-bold">{formatCurrency(portfolio.totalValue)}</p>
+                  <p className="text-2xl font-bold">{portfolio ? formatCurrency(portfolio.totalValue) : '₹0'}</p>
                 </div>
                 <Briefcase className="h-8 w-8 text-blue-500" />
               </div>
               <div className="mt-2 flex items-center">
                 <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
                 <span className="text-sm text-green-600 font-medium">
-                  +{portfolio.dayPnLPercent}% today
+                  +{portfolio?.dayPnLPercent || 0}% today
                 </span>
               </div>
             </CardContent>
@@ -365,14 +365,14 @@ export default function PortfolioPage() {
                 <div>
                   <p className="text-sm text-gray-600">Total P&L</p>
                   <p className="text-2xl font-bold text-green-600">
-                    {formatCurrency(portfolio.totalPnL)}
+                    {portfolio ? formatCurrency(portfolio.totalPnL) : '₹0'}
                   </p>
                 </div>
                 <TrendingUp className="h-8 w-8 text-green-500" />
               </div>
               <div className="mt-2">
                 <span className="text-sm text-green-600 font-medium">
-                  +{portfolio.totalPnLPercent}% overall
+                  +{portfolio?.totalPnLPercent || 0}% overall
                 </span>
               </div>
             </CardContent>
@@ -383,13 +383,13 @@ export default function PortfolioPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600">Active Positions</p>
-                  <p className="text-2xl font-bold">{portfolio.activePositions}</p>
+                  <p className="text-2xl font-bold">{portfolio?.activePositions || 0}</p>
                 </div>
                 <Target className="h-8 w-8 text-purple-500" />
               </div>
               <div className="mt-2">
                 <span className="text-sm text-gray-600">
-                  {portfolio.completedTrades} completed
+                  {portfolio?.completedTrades || 0} completed
                 </span>
               </div>
             </CardContent>
@@ -400,7 +400,7 @@ export default function PortfolioPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600">Win Rate</p>
-                  <p className="text-2xl font-bold text-green-600">{portfolio.winRate}%</p>
+                  <p className="text-2xl font-bold text-green-600">{portfolio?.winRate || 0}%</p>
                 </div>
                 <CheckCircle className="h-8 w-8 text-green-500" />
               </div>
@@ -432,11 +432,11 @@ export default function PortfolioPage() {
                   <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
                     <div>
                       <p className="font-semibold text-green-800">Best Performer</p>
-                      <p className="text-sm text-green-600">{portfolio.bestPerformer.symbol}</p>
+                      <p className="text-sm text-green-600">{portfolio?.bestPerformer?.symbol || 'N/A'}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-xl font-bold text-green-600">
-                        +{portfolio.bestPerformer.return}%
+                        +{portfolio?.bestPerformer?.return || 0}%
                       </p>
                     </div>
                   </div>
@@ -444,11 +444,11 @@ export default function PortfolioPage() {
                   <div className="flex items-center justify-between p-4 bg-red-50 rounded-lg">
                     <div>
                       <p className="font-semibold text-red-800">Worst Performer</p>
-                      <p className="text-sm text-red-600">{portfolio.worstPerformer.symbol}</p>
+                      <p className="text-sm text-red-600">{portfolio?.worstPerformer?.symbol || 'N/A'}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-xl font-bold text-red-600">
-                        {portfolio.worstPerformer.return}%
+                        {portfolio?.worstPerformer?.return || 0}%
                       </p>
                     </div>
                   </div>
@@ -462,19 +462,19 @@ export default function PortfolioPage() {
                 <CardContent className="space-y-4">
                   <div className="flex justify-between items-center">
                     <span>Sharpe Ratio</span>
-                    <span className="font-bold">{portfolio.riskMetrics.sharpeRatio}</span>
+                    <span className="font-bold">{portfolio?.riskMetrics?.sharpeRatio || 'N/A'}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span>Max Drawdown</span>
-                    <span className="font-bold text-red-600">{portfolio.riskMetrics.maxDrawdown}%</span>
+                    <span className="font-bold text-red-600">{portfolio?.riskMetrics?.maxDrawdown || 0}%</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span>Volatility</span>
-                    <span className="font-bold">{portfolio.riskMetrics.volatility}%</span>
+                    <span className="font-bold">{portfolio?.riskMetrics?.volatility || 0}%</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span>Beta</span>
-                    <span className="font-bold">{portfolio.riskMetrics.beta}</span>
+                    <span className="font-bold">{portfolio?.riskMetrics?.beta || 'N/A'}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -497,7 +497,7 @@ export default function PortfolioPage() {
                   <CardDescription>Portfolio distribution across trading strategies</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <AllocationChart data={portfolio.allocation} />
+                  <AllocationChart data={portfolio?.allocation || []} />
                 </CardContent>
               </Card>
 
@@ -507,7 +507,7 @@ export default function PortfolioPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {portfolio.allocation.map((item, index) => (
+                    {(portfolio?.allocation || []).map((item, index) => (
                       <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div className="flex items-center space-x-3">
                           <div 
