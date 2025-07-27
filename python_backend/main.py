@@ -35,6 +35,14 @@ except ImportError as e:
     print(f"AI Predictions not available: {e}")
     AI_PREDICTIONS_AVAILABLE = False
 
+# Import AI-enhanced signal endpoints
+try:
+    from ai_enhanced_endpoints import router as ai_enhanced_router
+    AI_ENHANCED_SIGNALS_AVAILABLE = True
+except ImportError as e:
+    print(f"AI Enhanced Signals not available: {e}")
+    AI_ENHANCED_SIGNALS_AVAILABLE = False
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -66,6 +74,13 @@ if AI_PREDICTIONS_AVAILABLE:
     logger.info("AI Price Prediction endpoints enabled")
 else:
     logger.warning("AI Price Prediction endpoints not available")
+
+# Include AI-enhanced signal endpoints if available
+if AI_ENHANCED_SIGNALS_AVAILABLE:
+    app.include_router(ai_enhanced_router)
+    logger.info("AI Enhanced Signal endpoints enabled")
+else:
+    logger.warning("AI Enhanced Signal endpoints not available")
 
 # WebSocket Connection Manager
 class ConnectionManager:
