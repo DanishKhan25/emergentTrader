@@ -35,7 +35,7 @@ const navigation = [
   { name: 'Settings', href: '/settings', icon: Settings },
 ]
 
-export default function MainLayout({ children }) {
+export default function MainLayout({ children, sidebarCollapsed = false }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [isOnline, setIsOnline] = useState(true)
   const pathname = usePathname()
@@ -58,6 +58,10 @@ export default function MainLayout({ children }) {
   useEffect(() => {
     setSidebarOpen(false)
   }, [pathname])
+
+  // Calculate sidebar width based on collapsed state
+  const sidebarWidth = sidebarCollapsed ? 'w-16' : 'w-64'
+  const sidebarPadding = sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-64'
 
   return (
     <div className="h-full">
@@ -139,12 +143,19 @@ export default function MainLayout({ children }) {
       </div>
 
       {/* Desktop sidebar */}
-      <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
+      <div className={cn(
+        "hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col transition-all duration-300",
+        sidebarWidth
+      )}>
         <div className="flex flex-col flex-grow bg-white border-r border-gray-200">
           <div className="flex h-16 items-center px-4">
-            <BarChart3 className="h-8 w-8 text-blue-600" />
-            <span className="ml-2 text-xl font-bold text-gray-900">EmergentTrader</span>
-            <Badge variant="secondary" className="ml-2 text-xs">v1.1</Badge>
+            <BarChart3 className="h-8 w-8 text-blue-600 flex-shrink-0" />
+            {!sidebarCollapsed && (
+              <>
+                <span className="ml-2 text-xl font-bold text-gray-900">EmergentTrader</span>
+                <Badge variant="secondary" className="ml-2 text-xs">v1.1</Badge>
+              </>
+            )}
           </div>
           <nav className="flex-1 space-y-1 px-2 py-4">
             {navigation.map((item) => {
@@ -157,16 +168,19 @@ export default function MainLayout({ children }) {
                     "group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors",
                     isActive
                       ? "bg-blue-100 text-blue-900"
-                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
+                    sidebarCollapsed ? "justify-center" : ""
                   )}
+                  title={sidebarCollapsed ? item.name : undefined}
                 >
                   <item.icon
                     className={cn(
-                      "mr-3 h-5 w-5",
-                      isActive ? "text-blue-500" : "text-gray-400 group-hover:text-gray-500"
+                      "h-5 w-5 flex-shrink-0",
+                      isActive ? "text-blue-500" : "text-gray-400 group-hover:text-gray-500",
+                      sidebarCollapsed ? "" : "mr-3"
                     )}
                   />
-                  {item.name}
+                  {!sidebarCollapsed && item.name}
                 </Link>
               )
             })}
@@ -174,25 +188,35 @@ export default function MainLayout({ children }) {
           
           {/* System Status */}
           <div className="p-4 border-t border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
+            {sidebarCollapsed ? (
+              <div className="flex justify-center">
                 {isOnline ? (
-                  <Wifi className="h-4 w-4 text-green-500" />
+                  <Wifi className="h-4 w-4 text-green-500" title="System Online" />
                 ) : (
-                  <WifiOff className="h-4 w-4 text-red-500" />
+                  <WifiOff className="h-4 w-4 text-red-500" title="Offline" />
                 )}
-                <span className="ml-2 text-sm text-gray-600">
-                  {isOnline ? 'System Online' : 'Offline'}
-                </span>
               </div>
-              <Badge variant="outline" className="text-xs">87% Success</Badge>
-            </div>
+            ) : (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  {isOnline ? (
+                    <Wifi className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <WifiOff className="h-4 w-4 text-red-500" />
+                  )}
+                  <span className="ml-2 text-sm text-gray-600">
+                    {isOnline ? 'System Online' : 'Offline'}
+                  </span>
+                </div>
+                <Badge variant="outline" className="text-xs">87% Success</Badge>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Main content */}
-      <div className="lg:pl-64">
+      <div className={cn("transition-all duration-300", sidebarPadding)}>
         {/* Top header with hamburger menu */}
         <div className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
           <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
