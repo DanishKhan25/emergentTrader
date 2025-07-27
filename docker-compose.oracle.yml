@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  emergent-trader-api:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: emergent-trader-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./models:/app/python_backend/models
+      - ./logs:/app/python_backend/logs
+      - ./data:/app/python_backend/data
+    environment:
+      - PYTHONPATH=/app/python_backend
+      - PYTHONUNBUFFERED=1
+      - MAX_CONCURRENT_TRAINING=4  # Optimized for 4 OCPUs
+      - OMP_NUM_THREADS=4          # ARM optimization
+      - LOG_LEVEL=INFO
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 20G  # Leave 4GB for system
+          cpus: '4'
+        reservations:
+          memory: 16G
+          cpus: '2'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/ai-signals/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  emergent-trader-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: emergent-trader-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NODE_ENV=production
+    restart: unless-stopped
+    depends_on:
+      - emergent-trader-api
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1'
+        reservations:
+          memory: 1G
+
+  # Optional: Nginx reverse proxy for production
+  nginx:
+    image: nginx:alpine
+    container_name: emergent-trader-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - emergent-trader-api
+      - emergent-trader-frontend
+    restart: unless-stopped
+    profiles:
+      - production
+
+volumes:
+  models_data:
+    driver: local
+  logs_data:
+    driver: local
+  data_volume:
+    driver: local
+
+networks:
+  default:
+    driver: bridge
