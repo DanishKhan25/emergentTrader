@@ -231,6 +231,36 @@ class SignalDatabase:
             'total_processed': len(signals)
         }
     
+    def get_active_signals_for_symbol(self, symbol: str) -> List[Dict[str, Any]]:
+        """Get all active signals for a specific symbol"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    SELECT * FROM signals 
+                    WHERE symbol = ? AND status = 'ACTIVE'
+                    ORDER BY generated_at DESC
+                ''', (symbol,))
+                
+                columns = [description[0] for description in cursor.description]
+                signals = []
+                
+                for row in cursor.fetchall():
+                    signal = dict(zip(columns, row))
+                    # Parse metadata JSON
+                    if signal.get('metadata'):
+                        try:
+                            signal['metadata'] = json.loads(signal['metadata'])
+                        except:
+                            pass
+                    signals.append(signal)
+                
+                return signals
+                
+        except Exception as e:
+            logger.error(f"Error getting active signals for {symbol}: {str(e)}")
+            return []
+    
     def save_consensus_signal(self, consensus_signal: Dict[str, Any]) -> bool:
         """Save a consensus signal (multi-strategy agreement)"""
         try:
