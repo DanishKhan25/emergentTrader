@@ -27,12 +27,14 @@ import {
   Wifi,
   WifiOff,
   TestTube,
+  ShoppingCart,
 } from "lucide-react";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: Home },
   { name: "Stocks", href: "/stocks", icon: Database },
   { name: "Signals", href: "/signals", icon: Target },
+  { name: "Signal Trading", href: "/signal-trading", icon: ShoppingCart },
   { name: "Strategies", href: "/strategies", icon: TrendingUp },
   { name: "Portfolio", href: "/portfolio", icon: Briefcase },
   { name: "Backtest", href: "/backtest", icon: TestTube },
