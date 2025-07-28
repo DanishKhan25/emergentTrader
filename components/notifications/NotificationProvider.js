@@ -223,35 +223,46 @@ export default function NotificationProvider({ children }) {
     });
   };
 
-  // Listen for WebSocket notifications (if available)
+  // Listen for real WebSocket notifications
   useEffect(() => {
-    // This would connect to your WebSocket for real-time notifications
-    // For now, we'll simulate some notifications for demo
-    const simulateNotifications = () => {
-      // Simulate a signal notification after 5 seconds
-      setTimeout(() => {
-        notifySignalGenerated({
-          symbol: "RELIANCE",
-          strategy: "Multibagger",
-          confidence: 0.94,
-          targetPrice: 2800,
-          currentPrice: 2450,
-        });
-      }, 5000);
+    // Real-time WebSocket integration for notifications
+    const handleWebSocketMessage = (data) => {
+      switch (data.type) {
+        case 'signal_generated':
+          notifySignalGenerated(data.data)
+          break
+        case 'target_hit':
+          notifyTargetHit(data.data)
+          break
+        case 'stop_loss_hit':
+          notifyStopLoss(data.data)
+          break
+        case 'portfolio_update':
+          notifyPortfolioUpdate(data.data)
+          break
+        case 'system_alert':
+          addNotification({
+            type: data.data.type || 'info',
+            title: data.data.title || 'System Alert',
+            message: data.data.message,
+            duration: data.data.duration || 5000
+          })
+          break
+        default:
+          // Handle other notification types
+          if (data.notification) {
+            addNotification(data.notification)
+          }
+          break
+      }
+    }
 
-      // Simulate portfolio update after 10 seconds
-      setTimeout(() => {
-        notifyPortfolioUpdate({
-          message: "Portfolio value increased by ₹12,450 (+2.3%) today",
-          change: 2.3,
-          amount: 12450,
-        });
-      }, 10000);
-    };
-
-    // Only simulate in development
-    if (process.env.NODE_ENV === "developmen") {
-      simulateNotifications();
+    // This will be handled by the WebSocket context
+    // The WebSocket context will call notification functions directly
+    // No simulation needed - real notifications come from backend
+    
+    return () => {
+      // Cleanup if needed
     }
   }, []);
 
