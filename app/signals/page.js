@@ -95,8 +95,8 @@ export default function SignalsPage() {
       // Define backend URL
       const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
       
-      // Load signals, active signals, and statistics in parallel
-      const [signalsResponse, activeResponse, statsResponse] = await Promise.all([
+      // Load signals and active signals in parallel
+      const [signalsResponse, activeResponse] = await Promise.all([
         fetch(`${BACKEND_URL}/signals`, { 
           headers: { 
             'Content-Type': 'application/json',
@@ -108,65 +108,36 @@ export default function SignalsPage() {
             'Content-Type': 'application/json',
             ...getAuthHeaders() 
           } 
-        }),
-        fetch(`${BACKEND_URL}/signals/statistics`, { 
-          headers: { 
-            'Content-Type': 'application/json',
-            ...getAuthHeaders() 
-          } 
         })
       ])
 
-      // Handle signals response (fallback to active signals if main endpoint doesn't exist)
+      // Handle signals response
       if (signalsResponse.ok) {
         const signalsData = await signalsResponse.json()
         if (signalsData.success) {
           setSignals(signalsData.data?.signals || signalsData.signals || [])
           setMarketDataAvailable(true)
         } else {
-          console.warn('Main signals API not available, using active signals as fallback')
-          // Use active signals as fallback
-          if (activeResponse.ok) {
-            const activeData = await activeResponse.json()
-            if (activeData.success) {
-              setSignals(activeData.signals || [])
-              setMarketDataAvailable(true)
-            }
-          }
-        }
-      } else {
-        console.warn(`Signals API returned ${signalsResponse.status}, using active signals as fallback`)
-        // Use active signals as fallback
-        if (activeResponse.ok) {
-          const activeData = await activeResponse.json()
-          if (activeData.success) {
-            setSignals(activeData.signals || [])
-            setMarketDataAvailable(true)
-          }
-        } else {
+          console.warn('Signals API not available, using fallback')
           setMarketDataAvailable(false)
         }
+      } else {
+        console.warn(`Signals API returned ${signalsResponse.status}`)
+        setMarketDataAvailable(false)
       }
 
       // Handle active signals response
       if (activeResponse.ok) {
         const activeData = await activeResponse.json()
         if (activeData.success) {
-          setActiveSignals(activeData.signals || [])
+          setActiveSignals(activeData.data?.signals || activeData.signals || [])
         }
       } else {
         console.warn(`Active signals API returned ${activeResponse.status}`)
       }
 
-      // Handle statistics response
-      if (statsResponse.ok) {
-        const statsData = await statsResponse.json()
-        if (statsData.success) {
-          setSignalStats(statsData)
-        }
-      } else {
-        console.warn(`Statistics API returned ${statsResponse.status}`)
-      }
+      // Calculate basic statistics from the loaded data
+      calculateBasicStats()
 
     } catch (error) {
       console.error('Error loading signal data:', error)
@@ -182,6 +153,67 @@ export default function SignalsPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const calculateBasicStats = () => {
+    // Calculate basic statistics from loaded signals
+    const totalSignals = signals.length
+    const activeCount = activeSignals.length
+    
+    // Count target hits and stop losses from signal status
+    let targetHits = 0
+    let stopLosses = 0
+    
+    signals.forEach(signal => {
+      if (signal.status === 'target_hit' || signal.status === 'completed') {
+        targetHits++
+      } else if (signal.status === 'stop_loss_hit' || signal.status === 'stopped') {
+        stopLosses++
+      }
+    })
+    
+    const successRate = totalSignals > 0 ? (targetHits / totalSignals) * 100 : 0
+    
+    // Group by strategy
+    const strategyStats = {}
+    signals.forEach(signal => {
+      const strategy = signal.strategy || 'unknown'
+      if (!strategyStats[strategy]) {
+        strategyStats[strategy] = {
+          strategy,
+          total: 0,
+          target_hits: 0,
+          stop_losses: 0,
+          success_rate: 0,
+          avg_profit_percent: 0
+        }
+      }
+      
+      strategyStats[strategy].total++
+      if (signal.status === 'target_hit' || signal.status === 'completed') {
+        strategyStats[strategy].target_hits++
+      } else if (signal.status === 'stop_loss_hit' || signal.status === 'stopped') {
+        strategyStats[strategy].stop_losses++
+      }
+    })
+    
+    // Calculate success rates for strategies
+    Object.values(strategyStats).forEach(stat => {
+      stat.success_rate = stat.total > 0 ? (stat.target_hits / stat.total) * 100 : 0
+    })
+    
+    setSignalStats({
+      success: true,
+      overall: {
+        total_signals: totalSignals,
+        active_signals: activeCount,
+        target_hits: targetHits,
+        stop_losses: stopLosses,
+        success_rate: successRate,
+        total_pnl: 0 // Would need price data to calculate
+      },
+      by_strategy: Object.values(strategyStats)
+    })
   }
 
   const handleNewSignal = (signalData) => {
@@ -234,27 +266,8 @@ export default function SignalsPage() {
   }
 
   const loadSignalStats = async () => {
-    try {
-      const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-      
-      const response = await fetch(`${BACKEND_URL}/signals/statistics`, { 
-        headers: {
-          'Content-Type': 'application/json',
-          ...getAuthHeaders()
-        }
-      })
-      
-      if (response.ok) {
-        const data = await response.json()
-        if (data.success) {
-          setSignalStats(data)
-        }
-      } else {
-        console.warn(`Statistics API returned ${response.status}`)
-      }
-    } catch (error) {
-      console.error('Error loading signal statistics:', error)
-    }
+    // Since /signals/statistics doesn't exist, recalculate from loaded data
+    calculateBasicStats()
   }
 
   const generateSignals = async () => {
@@ -317,8 +330,9 @@ export default function SignalsPage() {
     try {
       const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
       
+      // Use DELETE method as per the API specification
       const response = await fetch(`${BACKEND_URL}/signals/clear`, {
-        method: 'POST',
+        method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
           ...getAuthHeaders()
@@ -335,7 +349,7 @@ export default function SignalsPage() {
         addNotification({
           type: 'info',
           title: 'Signals Cleared',
-          message: `Cleared ${result.count_cleared || 0} signals from database`,
+          message: `Cleared signals from database`,
           duration: 5000
         })
       } else {
