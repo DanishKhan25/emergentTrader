@@ -412,6 +412,52 @@ class SignalManagementService:
                 'error': str(e)
             }
     
+    def get_all_signals(self, limit: int = 100) -> Dict:
+        """Get all signals (active and completed)"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                cursor.execute('''
+                    SELECT signal_id, symbol, strategy, signal_type, entry_price, 
+                           target_price, stop_loss, confidence, current_price, 
+                           status, created_at, updated_at, target_hit_at, 
+                           stop_loss_hit_at, profit_loss_percent, days_active
+                    FROM signals 
+                    ORDER BY created_at DESC
+                    LIMIT ?
+                ''', (limit,))
+                
+                signals = cursor.fetchall()
+                columns = [description[0] for description in cursor.description]
+                
+                all_signals = []
+                for row in signals:
+                    signal_dict = dict(zip(columns, row))
+                    
+                    # Calculate unrealized P&L for active signals
+                    if signal_dict['status'] == 'active' and signal_dict['current_price'] and signal_dict['entry_price']:
+                        unrealized_pnl = ((signal_dict['current_price'] - signal_dict['entry_price']) / 
+                                        signal_dict['entry_price']) * 100
+                        signal_dict['unrealized_pnl_percent'] = unrealized_pnl
+                    else:
+                        signal_dict['unrealized_pnl_percent'] = signal_dict.get('profit_loss_percent', 0)
+                    
+                    all_signals.append(signal_dict)
+                
+                return {
+                    'success': True,
+                    'signals': all_signals,
+                    'count': len(all_signals)
+                }
+                
+        except Exception as e:
+            logger.error(f"Error getting all signals: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+    
     async def fetch_current_prices(self, symbols: List[str]) -> Dict[str, float]:
         """Fetch current prices for given symbols"""
         try:

@@ -92,25 +92,60 @@ export default function SignalsPage() {
     try {
       setLoading(true)
       
+      // Define backend URL
+      const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+      
       // Load signals, active signals, and statistics in parallel
       const [signalsResponse, activeResponse, statsResponse] = await Promise.all([
-        fetch('/api/signals', { headers: getAuthHeaders() }),
-        fetch('/api/signals/active', { headers: getAuthHeaders() }),
-        fetch('/api/signals/statistics', { headers: getAuthHeaders() })
+        fetch(`${BACKEND_URL}/signals`, { 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...getAuthHeaders() 
+          } 
+        }),
+        fetch(`${BACKEND_URL}/signals/active`, { 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...getAuthHeaders() 
+          } 
+        }),
+        fetch(`${BACKEND_URL}/signals/statistics`, { 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...getAuthHeaders() 
+          } 
+        })
       ])
 
-      // Handle signals response
+      // Handle signals response (fallback to active signals if main endpoint doesn't exist)
       if (signalsResponse.ok) {
         const signalsData = await signalsResponse.json()
         if (signalsData.success) {
-          setSignals(signalsData.data?.signals || [])
+          setSignals(signalsData.data?.signals || signalsData.signals || [])
           setMarketDataAvailable(true)
         } else {
-          console.warn('Signals API not available, using fallback')
-          setMarketDataAvailable(false)
+          console.warn('Main signals API not available, using active signals as fallback')
+          // Use active signals as fallback
+          if (activeResponse.ok) {
+            const activeData = await activeResponse.json()
+            if (activeData.success) {
+              setSignals(activeData.signals || [])
+              setMarketDataAvailable(true)
+            }
+          }
         }
       } else {
-        setMarketDataAvailable(false)
+        console.warn(`Signals API returned ${signalsResponse.status}, using active signals as fallback`)
+        // Use active signals as fallback
+        if (activeResponse.ok) {
+          const activeData = await activeResponse.json()
+          if (activeData.success) {
+            setSignals(activeData.signals || [])
+            setMarketDataAvailable(true)
+          }
+        } else {
+          setMarketDataAvailable(false)
+        }
       }
 
       // Handle active signals response
@@ -119,6 +154,8 @@ export default function SignalsPage() {
         if (activeData.success) {
           setActiveSignals(activeData.signals || [])
         }
+      } else {
+        console.warn(`Active signals API returned ${activeResponse.status}`)
       }
 
       // Handle statistics response
@@ -127,6 +164,8 @@ export default function SignalsPage() {
         if (statsData.success) {
           setSignalStats(statsData)
         }
+      } else {
+        console.warn(`Statistics API returned ${statsResponse.status}`)
       }
 
     } catch (error) {
@@ -136,9 +175,9 @@ export default function SignalsPage() {
       // Show user-friendly notification
       addNotification({
         type: 'warning',
-        title: 'Market Data Service',
-        message: 'Market data service not available, using cached data',
-        duration: 5000
+        title: 'Backend Connection',
+        message: 'Unable to connect to trading backend. Please ensure the Python backend is running on port 8000.',
+        duration: 8000
       })
     } finally {
       setLoading(false)
@@ -196,8 +235,13 @@ export default function SignalsPage() {
 
   const loadSignalStats = async () => {
     try {
-      const response = await fetch('/api/signals/statistics', { 
-        headers: getAuthHeaders() 
+      const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+      
+      const response = await fetch(`${BACKEND_URL}/signals/statistics`, { 
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders()
+        }
       })
       
       if (response.ok) {
@@ -205,6 +249,8 @@ export default function SignalsPage() {
         if (data.success) {
           setSignalStats(data)
         }
+      } else {
+        console.warn(`Statistics API returned ${response.status}`)
       }
     } catch (error) {
       console.error('Error loading signal statistics:', error)
@@ -215,7 +261,9 @@ export default function SignalsPage() {
     try {
       setGenerating(true)
       
-      const response = await fetch('/api/signals/generate', {
+      const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+      
+      const response = await fetch(`${BACKEND_URL}/signals/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -248,17 +296,17 @@ export default function SignalsPage() {
         addNotification({
           type: 'error',
           title: 'Generation Failed',
-          message: result.error || 'Failed to generate signals',
-          duration: 5000
+          message: result.error || 'Failed to generate signals. Please ensure the Python backend is running.',
+          duration: 8000
         })
       }
     } catch (error) {
       console.error('Error generating signals:', error)
       addNotification({
         type: 'error',
-        title: 'Generation Error',
-        message: 'An error occurred while generating signals',
-        duration: 5000
+        title: 'Connection Error',
+        message: 'Unable to connect to backend. Please ensure the Python backend is running on port 8000.',
+        duration: 8000
       })
     } finally {
       setGenerating(false)
@@ -267,9 +315,14 @@ export default function SignalsPage() {
 
   const clearAllSignals = async () => {
     try {
-      const response = await fetch('/api/signals/clear', {
+      const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+      
+      const response = await fetch(`${BACKEND_URL}/signals/clear`, {
         method: 'POST',
-        headers: getAuthHeaders()
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders()
+        }
       })
 
       const result = await response.json()
@@ -285,14 +338,21 @@ export default function SignalsPage() {
           message: `Cleared ${result.count_cleared || 0} signals from database`,
           duration: 5000
         })
+      } else {
+        addNotification({
+          type: 'error',
+          title: 'Clear Failed',
+          message: result.error || 'Failed to clear signals',
+          duration: 5000
+        })
       }
     } catch (error) {
       console.error('Error clearing signals:', error)
       addNotification({
         type: 'error',
-        title: 'Clear Failed',
-        message: 'Failed to clear signals',
-        duration: 5000
+        title: 'Connection Error',
+        message: 'Unable to connect to backend. Please ensure the Python backend is running on port 8000.',
+        duration: 8000
       })
     }
   }

@@ -252,6 +252,21 @@ async def logout(credentials: HTTPAuthorizationCredentials = Depends(security)):
     return result
 
 # Signal management endpoints
+@app.get("/signals")
+async def get_all_signals(current_user: dict = Depends(get_current_user)):
+    """Get all signals (active and completed)"""
+    if not ENHANCED_SERVICES_AVAILABLE:
+        # Fallback to original API
+        return api_handler.generate_signals()
+    
+    try:
+        # Get all signals from signal manager
+        result = signal_manager.get_all_signals()
+        return result
+    except Exception as e:
+        logger.error(f"Error getting all signals: {e}")
+        return {"success": False, "error": str(e)}
+
 @app.get("/signals/active")
 async def get_active_signals(current_user: dict = Depends(get_current_user)):
     """Get all active signals"""
