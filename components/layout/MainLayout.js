@@ -1,12 +1,14 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import NotificationBell from '@/components/notifications/NotificationBell'
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import NotificationBell from "@/components/notifications/NotificationBell";
+import WebSocketStatus from "@/components/WebSocketStatus";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   BarChart3,
   TrendingUp,
@@ -24,66 +26,71 @@ import {
   LogOut,
   Wifi,
   WifiOff,
-  TestTube
-} from 'lucide-react'
+  TestTube,
+} from "lucide-react";
 
 const navigation = [
-  { name: 'Dashboard', href: '/', icon: Home },
-  { name: 'Stocks', href: '/stocks', icon: Database },
-  { name: 'Signals', href: '/signals', icon: Target },
-  { name: 'Strategies', href: '/strategies', icon: TrendingUp },
-  { name: 'Portfolio', href: '/portfolio', icon: Briefcase },
-  { name: 'Backtest', href: '/backtest', icon: TestTube },
-  { name: 'Analytics', href: '/analytics', icon: PieChart },
-  { name: 'Notifications', href: '/notifications', icon: Bell },
-  { name: 'Settings', href: '/settings', icon: Settings },
-]
+  { name: "Dashboard", href: "/", icon: Home },
+  { name: "Stocks", href: "/stocks", icon: Database },
+  { name: "Signals", href: "/signals", icon: Target },
+  { name: "Strategies", href: "/strategies", icon: TrendingUp },
+  { name: "Portfolio", href: "/portfolio", icon: Briefcase },
+  { name: "Backtest", href: "/backtest", icon: TestTube },
+  { name: "Analytics", href: "/analytics", icon: PieChart },
+  { name: "Notifications", href: "/notifications", icon: Bell },
+  { name: "Settings", href: "/settings", icon: Settings },
+];
 
 export default function MainLayout({ children }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [isOnline, setIsOnline] = useState(true)
-  const pathname = usePathname()
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
+  const pathname = usePathname();
+  const { user, logout } = useAuth();
 
   // Monitor online status
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true)
-    const handleOffline = () => setIsOnline(false)
-    
-    window.addEventListener('online', handleOnline)
-    window.addEventListener('offline', handleOffline)
-    
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
     return () => {
-      window.removeEventListener('online', handleOnline)
-      window.removeEventListener('offline', handleOffline)
-    }
-  }, [])
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
 
   // Close sidebar when route changes
   useEffect(() => {
-    setSidebarOpen(false)
-  }, [pathname])
+    setSidebarOpen(false);
+  }, [pathname]);
 
   return (
     <div className="h-full">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-40 bg-gray-600 bg-opacity-75 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Mobile sidebar */}
-      <div className={cn(
-        "fixed inset-y-0 left-0 z-50 w-64 bg-white transform transition-transform duration-300 ease-in-out lg:hidden",
-        sidebarOpen ? "translate-x-0" : "-translate-x-full"
-      )}>
+      <div
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 w-64 bg-white transform transition-transform duration-300 ease-in-out lg:hidden",
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
         <div className="flex flex-col h-full">
           {/* Mobile sidebar header */}
           <div className="flex h-16 items-center justify-between px-4 border-b border-gray-200">
             <div className="flex items-center">
               <BarChart3 className="h-8 w-8 text-blue-600" />
-              <span className="ml-2 text-xl font-bold text-gray-900">EmergentTrader</span>
+              <span className="ml-2 text-xl font-bold text-gray-900">
+                EmergentTrader
+              </span>
             </div>
             <Button
               variant="ghost"
@@ -94,11 +101,11 @@ export default function MainLayout({ children }) {
               <X className="h-5 w-5" />
             </Button>
           </div>
-          
+
           {/* Mobile navigation */}
           <nav className="flex-1 space-y-1 px-2 py-4">
             {navigation.map((item) => {
-              const isActive = pathname === item.href
+              const isActive = pathname === item.href;
               return (
                 <Link
                   key={item.name}
@@ -114,15 +121,17 @@ export default function MainLayout({ children }) {
                   <item.icon
                     className={cn(
                       "mr-3 h-5 w-5",
-                      isActive ? "text-blue-500" : "text-gray-400 group-hover:text-gray-500"
+                      isActive
+                        ? "text-blue-500"
+                        : "text-gray-400 group-hover:text-gray-500"
                     )}
                   />
                   {item.name}
                 </Link>
-              )
+              );
             })}
           </nav>
-          
+
           {/* Mobile system status */}
           <div className="p-4 border-t border-gray-200">
             <div className="flex items-center justify-between">
@@ -133,10 +142,12 @@ export default function MainLayout({ children }) {
                   <WifiOff className="h-4 w-4 text-red-500" />
                 )}
                 <span className="ml-2 text-sm text-gray-600">
-                  {isOnline ? 'System Online' : 'Offline'}
+                  {isOnline ? "System Online" : "Offline"}
                 </span>
               </div>
-              <Badge variant="outline" className="text-xs">87% Success</Badge>
+              <Badge variant="outline" className="text-xs">
+                87% Success
+              </Badge>
             </div>
           </div>
         </div>
@@ -147,12 +158,16 @@ export default function MainLayout({ children }) {
         <div className="flex flex-col flex-grow bg-white border-r border-gray-200">
           <div className="flex h-16 items-center px-4">
             <BarChart3 className="h-8 w-8 text-blue-600" />
-            <span className="ml-2 text-xl font-bold text-gray-900">EmergentTrader</span>
-            <Badge variant="secondary" className="ml-2 text-xs">v1.1</Badge>
+            <span className="ml-2 text-xl font-bold text-gray-900">
+              EmergentTrader
+            </span>
+            <Badge variant="secondary" className="ml-2 text-xs">
+              v1.1
+            </Badge>
           </div>
           <nav className="flex-1 space-y-1 px-2 py-4">
             {navigation.map((item) => {
-              const isActive = pathname === item.href
+              const isActive = pathname === item.href;
               return (
                 <Link
                   key={item.name}
@@ -167,15 +182,17 @@ export default function MainLayout({ children }) {
                   <item.icon
                     className={cn(
                       "mr-3 h-5 w-5",
-                      isActive ? "text-blue-500" : "text-gray-400 group-hover:text-gray-500"
+                      isActive
+                        ? "text-blue-500"
+                        : "text-gray-400 group-hover:text-gray-500"
                     )}
                   />
                   {item.name}
                 </Link>
-              )
+              );
             })}
           </nav>
-          
+
           {/* System Status */}
           <div className="p-4 border-t border-gray-200">
             <div className="flex items-center justify-between">
@@ -186,10 +203,12 @@ export default function MainLayout({ children }) {
                   <WifiOff className="h-4 w-4 text-red-500" />
                 )}
                 <span className="ml-2 text-sm text-gray-600">
-                  {isOnline ? 'System Online' : 'Offline'}
+                  {isOnline ? "System Online" : "Offline"}
                 </span>
               </div>
-              <Badge variant="outline" className="text-xs">87% Success</Badge>
+              <Badge variant="outline" className="text-xs">
+                87% Success
+              </Badge>
             </div>
           </div>
         </div>
@@ -201,47 +220,63 @@ export default function MainLayout({ children }) {
         <div className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
           <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
             {/* Hamburger menu button - more prominent */}
-            <div className="flex items-center lg:hidden">
+            <div className="flex items-center ">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setSidebarOpen(true)}
-                className="p-2 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500"
+                className="p-2 hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 lg:hidden"
               >
                 <Menu className="h-6 w-6 text-gray-700" />
                 <span className="sr-only">Open sidebar</span>
               </Button>
-              
+
               {/* Mobile logo */}
-              <div className="ml-3 flex items-center lg:hidden">
+              <div className="ml-3 flex items-center">
                 <BarChart3 className="h-6 w-6 text-blue-600" />
-                <span className="ml-2 text-lg font-bold text-gray-900">EmergentTrader</span>
+                <span className="ml-2 text-lg font-bold text-gray-900 lg:hidden">
+                  EmergentTrader
+                </span>
               </div>
             </div>
-            
+
             {/* Right side actions */}
             <div className="flex items-center space-x-4">
               <div className="hidden md:block">
                 <div className="flex items-center space-x-2">
                   <Activity className="h-4 w-4 text-green-500" />
-                  <span className="text-sm text-gray-600">Live Market Data</span>
+                  <span className="text-sm text-gray-600">
+                    Live Market Data
+                  </span>
                 </div>
               </div>
-              
+
+              {/* WebSocket Status */}
+              <WebSocketStatus />
+
               <NotificationBell />
-              
-              <Button variant="ghost" size="sm">
-                <User className="h-5 w-5" />
-              </Button>
+
+              {/* User Menu */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600">
+                  {user?.name || 'User'}
+                </span>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={logout}
+                  className="text-red-600 hover:text-red-700"
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Page content */}
-        <main className="flex-1 bg-gray-50">
-          {children}
-        </main>
+        <main className="flex-1 bg-gray-50">{children}</main>
       </div>
     </div>
-  )
+  );
 }

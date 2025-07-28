@@ -1,5 +1,10 @@
+import ProtectedRoute from '@/components/auth/ProtectedRoute'
 import DynamicDashboard from '@/components/DynamicDashboard'
 
 export default function Home() {
-  return <DynamicDashboard />
+  return (
+    <ProtectedRoute>
+      <DynamicDashboard />
+    </ProtectedRoute>
+  )
 }
