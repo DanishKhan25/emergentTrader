@@ -21,20 +21,23 @@ export default function AuthProvider({ children }) {
 
   // Check for existing token on mount
   useEffect(() => {
-    const storedToken = localStorage.getItem('auth_token')
-    const storedUser = localStorage.getItem('auth_user')
-    
-    if (storedToken && storedUser) {
-      try {
-        const userData = JSON.parse(storedUser)
-        setToken(storedToken)
-        setUser(userData)
-        
-        // Verify token is still valid
-        verifyToken(storedToken)
-      } catch (error) {
-        console.error('Error parsing stored user data:', error)
-        logout()
+    // Only run on client side
+    if (typeof window !== 'undefined') {
+      const storedToken = localStorage.getItem('auth_token')
+      const storedUser = localStorage.getItem('auth_user')
+      
+      if (storedToken && storedUser) {
+        try {
+          const userData = JSON.parse(storedUser)
+          setToken(storedToken)
+          setUser(userData)
+          
+          // Verify token is still valid
+          verifyToken(storedToken)
+        } catch (error) {
+          console.error('Error parsing stored user data:', error)
+          logout()
+        }
       }
     }
     
@@ -78,9 +81,14 @@ export default function AuthProvider({ children }) {
         setToken(data.token)
         setUser(data.user)
         
-        // Store in localStorage
-        localStorage.setItem('auth_token', data.token)
-        localStorage.setItem('auth_user', JSON.stringify(data.user))
+        // Store in localStorage only on client side
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('auth_token', data.token)
+          localStorage.setItem('auth_user', JSON.stringify(data.user))
+          
+          // Also set cookie for middleware
+          document.cookie = `auth_token=${data.token}; path=/; max-age=${24 * 60 * 60}` // 24 hours
+        }
         
         return { success: true }
       } else {
@@ -107,8 +115,16 @@ export default function AuthProvider({ children }) {
     } finally {
       setToken(null)
       setUser(null)
-      localStorage.removeItem('auth_token')
-      localStorage.removeItem('auth_user')
+      
+      // Clear storage only on client side
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('auth_token')
+        localStorage.removeItem('auth_user')
+        
+        // Clear cookie
+        document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT'
+      }
+      
       router.push('/login')
     }
   }
@@ -130,8 +146,13 @@ export default function AuthProvider({ children }) {
         setToken(data.token)
         setUser(data.user)
         
-        localStorage.setItem('auth_token', data.token)
-        localStorage.setItem('auth_user', JSON.stringify(data.user))
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('auth_token', data.token)
+          localStorage.setItem('auth_user', JSON.stringify(data.user))
+          
+          // Update cookie
+          document.cookie = `auth_token=${data.token}; path=/; max-age=${24 * 60 * 60}`
+        }
         
         return true
       } else {

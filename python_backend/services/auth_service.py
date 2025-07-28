@@ -81,12 +81,13 @@ class AuthService:
     
     def _generate_token(self, username: str, user: Dict) -> str:
         """Generate JWT token"""
+        now = datetime.now()
         payload = {
             'username': username,
             'name': user['name'],
             'role': user['role'],
-            'iat': datetime.now(),
-            'exp': datetime.now() + timedelta(hours=self.token_expiry_hours)
+            'iat': int(now.timestamp()),
+            'exp': int((now + timedelta(hours=self.token_expiry_hours)).timestamp())
         }
         
         return jwt.encode(payload, self.jwt_secret, algorithm=self.jwt_algorithm)

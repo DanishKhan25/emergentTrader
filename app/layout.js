@@ -1,6 +1,8 @@
 import './globals.css'
 import { Inter } from 'next/font/google'
 import { DataProvider } from '@/contexts/DataContext'
+import AuthProvider from '@/contexts/AuthContext'
+import WebSocketProvider from '@/contexts/WebSocketContext'
 import NotificationProvider from '@/components/notifications/NotificationProvider'
 import { Toaster } from 'sonner'
 
@@ -16,19 +18,23 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className="h-full">
       <body className={`${inter.className} h-full bg-gray-50 antialiased`}>
-        <DataProvider>
-          <NotificationProvider>
-            <div className="min-h-full">
-              {children}
-            </div>
-            <Toaster 
-              position="top-right"
-              richColors
-              closeButton
-              duration={5000}
-            />
-          </NotificationProvider>
-        </DataProvider>
+        <AuthProvider>
+          <DataProvider>
+            <NotificationProvider>
+              <WebSocketProvider>
+                <div className="min-h-full">
+                  {children}
+                </div>
+                <Toaster 
+                  position="top-right"
+                  richColors
+                  closeButton
+                  duration={5000}
+                />
+              </WebSocketProvider>
+            </NotificationProvider>
+          </DataProvider>
+        </AuthProvider>
       </body>
     </html>
   )
