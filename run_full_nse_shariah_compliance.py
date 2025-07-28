@@ -173,9 +173,9 @@ def process_full_nse_with_batching():
     batched_filter = BatchedShariahFilter(batch_size=50)
     
     # Adjust configuration for large-scale processing
-    batched_filter.batch_config.delay_between_items = 2.0      # 2 seconds between stocks
-    batched_filter.batch_config.delay_between_batches = 45.0   # 45 seconds between batches
-    batched_filter.batch_config.rate_limit_delay = 120.0       # 2 minutes when rate limited
+    batched_filter.batch_config.delay_between_items = 0.01      # 2 seconds between stocks
+    batched_filter.batch_config.delay_between_batches = 1.0  # 45 seconds between batches
+    batched_filter.batch_config.rate_limit_delay = 5.0       # 2 minutes when rate limited
     batched_filter.batch_config.max_retries = 3               # More retries for reliability
     
     print(f"✅ Batch configuration:")

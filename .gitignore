@@ -105,4 +105,30 @@ ml_demo_results_*.json
 comprehensive_test_report.json
 cleanup_summary_*.txt
 
+# Database files
 *.db
+*.sqlite
+*.sqlite3
+python_backend/data/signals.db
+python_backend/emergent_trader.db
+emergent_trader.db
+data/signals.db
+
+# Docker and Oracle Cloud files (temporary exclusion)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+*oracle*
+*cloud*
+get_public_ip.sh
+update_public_ip.sh
+
+# Temporary scripts
+clear_frontend_cache.js
+test_api_call.js
+update_shariah_cache_from_json.py
+rebuild_shariah_cache.py
+verify_shariah_discrepancy.py
+
+# ML Models (can be large)
+python_backend/models/price_prediction/*.joblib
