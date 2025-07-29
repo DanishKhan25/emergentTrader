@@ -3,29 +3,24 @@ FastAPI Main Application - EmergentTrader Backend
 Production-ready API server with all trading endpoints
 """
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel
-from typing import List, Optional, Dict, Any
 import json
-import asyncio
 import logging
-from datetime import datetime
-import uvicorn
 import os
 import sys
 from datetime import datetime
-import logging
+from typing import List, Optional
+
+import uvicorn
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
 # Add current directory to path
 sys.path.append(os.path.dirname(__file__))
 
 # Import our modules
 from api_handler import EmergentTraderAPI
-from core.enhanced_signal_engine import EnhancedSignalEngine
-from core.enhanced_shariah_filter import EnhancedShariahFilter
-from core.backtest_engine import BacktestEngine
 
 # Import AI prediction endpoints
 try:
@@ -273,6 +268,7 @@ async def generate_signals_alt(request: SignalRequest):
             shariah_only=request.shariah_only,
             min_confidence=request.min_confidence
         )
+        print(result)
         return result
     except Exception as e:
         logger.error(f"Error generating signals: {str(e)}")

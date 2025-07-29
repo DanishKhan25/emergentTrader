@@ -88,6 +88,75 @@ export default function SignalsPage() {
     }
   }, [lastMessage])
 
+  const processSignalData = (signal) => {
+    // Parse metadata if it exists and is a string
+    let metadata = {}
+    if (signal.metadata && typeof signal.metadata === 'string') {
+      try {
+        metadata = JSON.parse(signal.metadata)
+      } catch (e) {
+        console.warn('Failed to parse signal metadata:', e)
+      }
+    } else if (signal.metadata && typeof signal.metadata === 'object') {
+      metadata = signal.metadata
+    }
+
+    // Calculate days active
+    const createdAt = new Date(signal.generated_at || signal.created_at || Date.now())
+    const now = new Date()
+    const daysActive = Math.floor((now - createdAt) / (1000 * 60 * 60 * 24))
+
+    // Get current price (try multiple sources)
+    const currentPrice = signal.current_price || signal.price || signal.entry_price || metadata.entry_price || 0
+    const entryPrice = signal.entry_price || metadata.entry_price || currentPrice
+    
+    // Calculate unrealized P&L if we have both prices
+    let unrealizedPnlPercent = 0
+    if (currentPrice && entryPrice && entryPrice > 0) {
+      unrealizedPnlPercent = ((currentPrice - entryPrice) / entryPrice) * 100
+    }
+
+    // Get confidence (try multiple sources)
+    const confidence = signal.confidence || signal.confidence_score || metadata.confidence_score || 0
+
+    // Process the signal with standardized field names
+    return {
+      ...signal,
+      // Standardized fields
+      signal_id: signal.signal_id || signal.id,
+      symbol: signal.symbol,
+      strategy: signal.strategy,
+      signal_type: signal.signal_type || 'BUY',
+      entry_price: entryPrice,
+      current_price: currentPrice,
+      target_price: signal.target_price || metadata.target_price || 0,
+      stop_loss: signal.stop_loss || metadata.stop_loss || 0,
+      confidence: confidence,
+      status: (signal.status || 'ACTIVE').toLowerCase(),
+      
+      // Calculated fields
+      days_active: daysActive,
+      unrealized_pnl_percent: unrealizedPnlPercent,
+      
+      // Additional metadata fields
+      sector: metadata.sector || signal.sector || 'Unknown',
+      market_cap: metadata.market_cap || signal.market_cap,
+      risk_reward_ratio: metadata.risk_reward_ratio || signal.risk_reward_ratio,
+      strategy_reason: metadata.strategy_reason || signal.strategy_reason,
+      investment_thesis: metadata.investment_thesis || signal.investment_thesis,
+      shariah_compliant: metadata.shariah_compliant || signal.shariah_compliant || false,
+      
+      // Technical indicators
+      rsi: metadata.rsi || signal.rsi,
+      momentum_score: metadata.momentum_score || signal.momentum_score,
+      volume_ratio: metadata.volume_ratio || signal.volume_ratio,
+      
+      // Timestamps
+      created_at: signal.generated_at || signal.created_at,
+      updated_at: signal.updated_at
+    }
+  }
+
   const loadSignalData = async () => {
     try {
       setLoading(true)
@@ -115,7 +184,9 @@ export default function SignalsPage() {
       if (signalsResponse.ok) {
         const signalsData = await signalsResponse.json()
         if (signalsData.success) {
-          setSignals(signalsData.data?.signals || signalsData.signals || [])
+          const rawSignals = signalsData.data?.signals || signalsData.signals || []
+          const processedSignals = rawSignals.map(processSignalData)
+          setSignals(processedSignals)
           setMarketDataAvailable(true)
         } else {
           console.warn('Signals API not available, using fallback')
@@ -130,7 +201,9 @@ export default function SignalsPage() {
       if (activeResponse.ok) {
         const activeData = await activeResponse.json()
         if (activeData.success) {
-          setActiveSignals(activeData.data?.signals || activeData.signals || [])
+          const rawActiveSignals = activeData.data?.signals || activeData.signals || []
+          const processedActiveSignals = rawActiveSignals.map(processSignalData)
+          setActiveSignals(processedActiveSignals)
         }
       } else {
         console.warn(`Active signals API returned ${activeResponse.status}`)

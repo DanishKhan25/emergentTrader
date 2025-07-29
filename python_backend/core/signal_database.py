@@ -160,9 +160,26 @@ class SignalDatabase:
                 if self.check_duplicate_signal(symbol, target_price, stop_loss, strategy):
                     logger.warning(f"Skipping duplicate signal for {symbol} (Target: {target_price}, SL: {stop_loss})")
                     return False
+
             
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
+
+                # 🔍 Step 2: Check if ACTIVE signal already exists for same symbol + strategy
+                cursor.execute('''
+                               SELECT 1
+                               FROM signals
+                               WHERE symbol = ?
+                                 AND strategy = ?
+                                 AND status = 'ACTIVE'
+                               LIMIT 1
+                               ''', (symbol, strategy))
+                exists = cursor.fetchone()
+
+                if exists:
+                    logger.warning(
+                        f"Skipping insertion: Active signal already exists for {symbol} using strategy {strategy}")
+                    return False
                 
                 # Generate unique signal ID if not provided
                 signal_id = signal.get('signal_id', f"{signal['symbol']}_{signal['strategy']}_{int(datetime.now().timestamp())}")
