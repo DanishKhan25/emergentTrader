@@ -1,18 +1,16 @@
 {
-    "name": "nextjs-mongo-template",
-    "version": "0.1.0",
+    "name": "emergenttrader-frontend",
+    "version": "2.0.0",
     "private": true,
     "scripts": {
-        "dev": "NODE_OPTIONS='--max-old-space-size=512' next dev --hostname 0.0.0.0 --port 3000",
-        "dev:no-reload": "next dev --hostname 0.0.0.0 --port 3000",
-        "dev:webpack": "next dev --hostname 0.0.0.0 --port 3000",
+        "dev": "next dev --hostname 0.0.0.0 --port 3000",
         "build": "next build",
-        "start": "next start",
-        "db:setup": "node scripts/setup-database.js",
-        "db:status": "node scripts/db-manager.js status",
-        "db:cleanup": "node scripts/db-manager.js cleanup",
-        "db:export": "node scripts/db-manager.js export",
-        "db:reset": "node scripts/db-manager.js reset"
+        "start": "next start --hostname 0.0.0.0 --port 3000",
+        "lint": "next lint",
+        "export": "next export",
+        "analyze": "cross-env ANALYZE=true next build",
+        "clean": "rm -rf .next out",
+        "postbuild": "next-sitemap"
     },
     "dependencies": {
         "@hookform/resolvers": "^5.1.1",
@@ -45,20 +43,15 @@
         "@radix-ui/react-tooltip": "^1.2.7",
         "@tanstack/react-table": "^8.21.3",
         "axios": "^1.10.0",
-        "child_process": "^1.0.2",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "cmdk": "^1.1.1",
         "date-fns": "^4.1.0",
-        "dotenv": "^17.2.1",
         "embla-carousel-react": "^8.6.0",
         "input-otp": "^1.4.2",
         "lucide-react": "^0.516.0",
-        "mongodb": "^6.6.0",
         "next": "^14.2.30",
         "next-themes": "^0.4.6",
-        "node-cron": "^3.0.3",
-        "nodemailer": "^6.9.15",
         "react": "^18",
         "react-day-picker": "^9.7.0",
         "react-dom": "^18",
@@ -66,8 +59,6 @@
         "react-resizable-panels": "^3.0.3",
         "recharts": "^2.15.3",
         "sonner": "^2.0.6",
-        "swagger-jsdoc": "^6.2.8",
-        "swagger-ui-react": "^5.27.0",
         "tailwind-merge": "^3.3.1",
         "tailwindcss-animate": "^1.0.7",
         "uuid": "^9.0.1",
@@ -75,10 +66,22 @@
         "zod": "^3.25.67"
     },
     "devDependencies": {
+        "@next/bundle-analyzer": "^14.2.30",
+        "@types/node": "^20",
+        "@types/react": "^18",
+        "@types/react-dom": "^18",
         "autoprefixer": "^10.4.19",
-        "globals": "^16.2.0",
+        "cross-env": "^7.0.3",
+        "eslint": "^8",
+        "eslint-config-next": "14.2.30",
+        "next-sitemap": "^4.2.3",
         "postcss": "^8",
-        "tailwindcss": "^3.4.1"
+        "tailwindcss": "^3.4.1",
+        "typescript": "^5"
     },
-    "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+    "engines": {
+        "node": ">=18.0.0",
+        "npm": ">=8.0.0"
+    },
+    "packageManager": "npm@10.2.4"
 }
