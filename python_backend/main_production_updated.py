@@ -1,6 +1,6 @@
 """
 Production FastAPI Main Application - EmergentTrader Backend
-Optimized for Render deployment with health checks and monitoring
+Optimized for Render deployment with SQLite/PostgreSQL flexibility
 """
 
 import json
@@ -9,6 +9,7 @@ import os
 import sys
 from datetime import datetime
 from typing import List, Optional
+from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, BackgroundTasks
@@ -52,8 +53,8 @@ logger = logging.getLogger(__name__)
 # Initialize FastAPI app
 app = FastAPI(
     title="EmergentTrader API",
-    description="Production-grade trading signal system with automated signal generation",
-    version="2.0.0",
+    description="Production-grade trading signal system with automated signal generation and Telegram notifications",
+    version="2.1.0",
     docs_url="/docs",
     redoc_url="/redoc"
 )
@@ -108,6 +109,36 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
+# Database setup based on environment
+def setup_database():
+    """Setup database based on environment variables"""
+    use_sqlite = os.getenv("USE_SQLITE", "false").lower() == "true"
+    database_url = os.getenv("DATABASE_URL")
+    
+    if use_sqlite or not database_url:
+        logger.info("Using SQLite database")
+        # Ensure database file exists
+        db_path = Path("emergent_trader.db")
+        if not db_path.exists():
+            # Run migration to create database
+            try:
+                from migrate_to_production import ProductionMigrator
+                migrator = ProductionMigrator()
+                migrator.run_migration()
+                logger.info("SQLite database created and migrated")
+            except Exception as e:
+                logger.error(f"Error creating SQLite database: {e}")
+        return True
+    else:
+        logger.info("Using PostgreSQL database")
+        # Test PostgreSQL connection
+        try:
+            # You can add PostgreSQL connection test here if needed
+            return True
+        except Exception as e:
+            logger.error(f"PostgreSQL connection failed: {e}")
+            return False
+
 # Health check endpoint for Render
 @app.get("/health")
 async def health_check():
@@ -116,12 +147,17 @@ async def health_check():
         # Test database connection
         test_result = api_handler.test_database_connection()
         
+        # Check if Telegram is configured
+        telegram_configured = bool(os.getenv("TELEGRAM_BOT_TOKEN"))
+        
         return {
             "status": "healthy",
             "timestamp": datetime.now().isoformat(),
             "database": "connected" if test_result else "disconnected",
-            "version": "2.0.0",
-            "environment": os.getenv("PYTHON_ENV", "development")
+            "telegram": "configured" if telegram_configured else "not_configured",
+            "version": "2.1.0",
+            "environment": os.getenv("PYTHON_ENV", "development"),
+            "database_type": "sqlite" if os.getenv("USE_SQLITE", "false").lower() == "true" else "postgresql"
         }
     except Exception as e:
         logger.error(f"Health check failed: {e}")
@@ -131,11 +167,18 @@ async def health_check():
 @app.get("/")
 async def root():
     return {
-        "message": "EmergentTrader API v2.0 - Production Ready",
+        "message": "EmergentTrader API v2.1 - Production Ready with Telegram Notifications",
         "status": "running",
         "timestamp": datetime.now().isoformat(),
         "docs": "/docs",
-        "health": "/health"
+        "health": "/health",
+        "features": [
+            "Automated signal generation 3x daily",
+            "Telegram notifications",
+            "Email alerts",
+            "Real-time WebSocket updates",
+            "ML-enhanced signals"
+        ]
     }
 
 # Signal generation endpoints
@@ -209,128 +252,6 @@ async def add_position(position: dict):
         logger.error(f"Error adding position: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/portfolio/positions")
-async def get_portfolio_positions():
-    """Get portfolio positions"""
-    try:
-        result = api_handler.get_portfolio()
-        return result.get('positions', [])
-    except Exception as e:
-        logger.error(f"Error getting portfolio positions: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/portfolio/allocation")
-async def get_portfolio_allocation():
-    """Get portfolio allocation"""
-    try:
-        result = api_handler.get_portfolio()
-        return result.get('allocation', {})
-    except Exception as e:
-        logger.error(f"Error getting portfolio allocation: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/strategies")
-async def get_strategies():
-    """Get available trading strategies"""
-    try:
-        strategies = [
-            {"id": "multibagger", "name": "Multibagger", "description": "High-growth potential stocks"},
-            {"id": "momentum", "name": "Momentum", "description": "Stocks with strong price momentum"},
-            {"id": "breakout", "name": "Breakout", "description": "Stocks breaking resistance levels"},
-            {"id": "swing_trading", "name": "Swing Trading", "description": "Short to medium-term opportunities"},
-            {"id": "mean_reversion", "name": "Mean Reversion", "description": "Oversold stocks likely to bounce"},
-            {"id": "value_investing", "name": "Value Investing", "description": "Undervalued stocks with strong fundamentals"}
-        ]
-        return {"success": True, "strategies": strategies}
-    except Exception as e:
-        logger.error(f"Error getting strategies: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/signals/today")
-async def get_signals_today():
-    """Get today's signals"""
-    try:
-        result = api_handler.get_active_signals(days=1)
-        return result
-    except Exception as e:
-        logger.error(f"Error getting today's signals: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/signals/open")
-async def get_signals_open():
-    """Get open signals"""
-    try:
-        result = api_handler.get_active_signals()
-        return result
-    except Exception as e:
-        logger.error(f"Error getting open signals: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/performance")
-async def get_performance():
-    """Get performance data"""
-    try:
-        # Mock performance data
-        performance = {
-            "total_return": 15.2,
-            "daily_return": 0.8,
-            "win_rate": 68.5,
-            "total_trades": 45,
-            "winning_trades": 31,
-            "losing_trades": 14
-        }
-        return {"success": True, "performance": performance}
-    except Exception as e:
-        logger.error(f"Error getting performance: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/performance/summary")
-async def get_performance_summary(period: str = "30d"):
-    """Get performance summary"""
-    try:
-        # Mock performance summary
-        summary = {
-            "period": period,
-            "total_return": 15.2,
-            "sharpe_ratio": 1.8,
-            "max_drawdown": -5.2,
-            "volatility": 12.5,
-            "trades_count": 45
-        }
-        return {"success": True, "summary": summary}
-    except Exception as e:
-        logger.error(f"Error getting performance summary: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/stocks/all")
-async def get_all_stocks():
-    """Get all stocks"""
-    try:
-        # Mock stock data
-        stocks = [
-            {"symbol": "RELIANCE", "name": "Reliance Industries", "price": 2450.50, "change": 1.2},
-            {"symbol": "TCS", "name": "Tata Consultancy Services", "price": 3650.75, "change": -0.8},
-            {"symbol": "INFY", "name": "Infosys", "price": 1580.25, "change": 2.1}
-        ]
-        return {"success": True, "stocks": stocks}
-    except Exception as e:
-        logger.error(f"Error getting all stocks: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/stocks/shariah")
-async def get_shariah_stocks():
-    """Get Shariah-compliant stocks"""
-    try:
-        # Mock Shariah stock data
-        stocks = [
-            {"symbol": "TCS", "name": "Tata Consultancy Services", "price": 3650.75, "change": -0.8, "shariah_compliant": True},
-            {"symbol": "INFY", "name": "Infosys", "price": 1580.25, "change": 2.1, "shariah_compliant": True}
-        ]
-        return {"success": True, "stocks": stocks}
-    except Exception as e:
-        logger.error(f"Error getting Shariah stocks: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
 # Market data endpoints
 @app.get("/api/market/data/{symbol}")
 async def get_market_data(symbol: str):
@@ -378,11 +299,35 @@ async def get_scheduled_status():
         return {
             "scheduled_jobs": recent_reports,
             "last_run": recent_reports[0] if recent_reports else None,
-            "total_runs": len(recent_reports)
+            "total_runs": len(recent_reports),
+            "telegram_enabled": bool(os.getenv("TELEGRAM_BOT_TOKEN"))
         }
     except Exception as e:
         logger.error(f"Error getting scheduled status: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# Telegram test endpoint
+@app.post("/api/telegram/test")
+async def test_telegram():
+    """Test Telegram bot connection"""
+    try:
+        from services.telegram_service import test_telegram_service
+        import asyncio
+        
+        result = await test_telegram_service()
+        return {
+            "telegram_test": "success" if result else "failed",
+            "bot_configured": bool(os.getenv("TELEGRAM_BOT_TOKEN")),
+            "chat_configured": bool(os.getenv("TELEGRAM_CHAT_ID"))
+        }
+    except Exception as e:
+        logger.error(f"Error testing Telegram: {e}")
+        return {
+            "telegram_test": "error",
+            "error": str(e),
+            "bot_configured": bool(os.getenv("TELEGRAM_BOT_TOKEN")),
+            "chat_configured": bool(os.getenv("TELEGRAM_CHAT_ID"))
+        }
 
 # WebSocket endpoint for real-time updates
 @app.websocket("/ws")
@@ -417,9 +362,9 @@ async def broadcast_signal_update(event_type: str, data: dict = None):
 async def run_signal_tracking():
     """Background task for signal tracking"""
     try:
-        from scheduled_signal_generator import ScheduledSignalGenerator
+        from scheduled_signal_generator import EnhancedScheduledSignalGenerator
         
-        generator = ScheduledSignalGenerator("tracking")
+        generator = EnhancedScheduledSignalGenerator("tracking")
         await generator.track_signal_progress()
         
         # Broadcast update
@@ -443,12 +388,35 @@ async def startup_event():
     """Initialize application on startup"""
     logger.info("EmergentTrader API starting up...")
     
-    # Test database connection
+    # Setup database
+    try:
+        if setup_database():
+            logger.info("Database setup successful")
+        else:
+            logger.error("Database setup failed")
+    except Exception as e:
+        logger.error(f"Database setup error: {e}")
+    
+    # Test API handler
     try:
         api_handler.test_database_connection()
-        logger.info("Database connection successful")
+        logger.info("API handler initialized successfully")
     except Exception as e:
-        logger.error(f"Database connection failed: {e}")
+        logger.error(f"API handler initialization failed: {e}")
+    
+    # Test Telegram if configured
+    telegram_token = os.getenv("TELEGRAM_BOT_TOKEN")
+    if telegram_token:
+        try:
+            from services.telegram_service import telegram_service
+            if await telegram_service.test_connection():
+                logger.info("Telegram bot connection successful")
+            else:
+                logger.warning("Telegram bot connection failed")
+        except Exception as e:
+            logger.error(f"Telegram test error: {e}")
+    else:
+        logger.info("Telegram not configured - skipping test")
     
     # Create necessary directories
     os.makedirs("reports", exist_ok=True)
@@ -493,9 +461,11 @@ if __name__ == "__main__":
     host = os.getenv("HOST", "0.0.0.0")
     
     logger.info(f"Starting EmergentTrader API on {host}:{port}")
+    logger.info(f"Database type: {'SQLite' if os.getenv('USE_SQLITE', 'false').lower() == 'true' else 'PostgreSQL'}")
+    logger.info(f"Telegram configured: {bool(os.getenv('TELEGRAM_BOT_TOKEN'))}")
     
     uvicorn.run(
-        "main_production:app",
+        "main_production_updated:app",
         host=host,
         port=port,
         log_level="info",

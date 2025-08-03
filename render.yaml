@@ -1,0 +1,64 @@
+services:
+  # Backend Service
+  - type: web
+    name: emergenttrader-backend
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: "pip install --no-cache-dir -r requirements.txt"
+    startCommand: "python main.py"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.4
+      - key: PORT
+        value: 10000
+      - key: ENVIRONMENT
+        value: production
+    healthCheckPath: /health
+    
+  # Frontend Service  
+  - type: web
+    name: emergenttrader-frontend
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: "npm ci --only=production && npm run build"
+    startCommand: "npm start"
+    envVars:
+      - key: NODE_VERSION
+        value: 18.17.0
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          type: web
+          name: emergenttrader-backend
+          property: host
+      - key: PORT
+        value: 3000
+    healthCheckPath: /
+    
+# Build optimizations
+buildSettings:
+  # Use build cache
+  cache: true
+  
+  # Optimize build resources
+  buildCommand: |
+    # Backend
+    cd python_backend
+    pip install --no-cache-dir --user -r requirements.txt
+    
+    # Frontend  
+    cd ..
+    npm ci --only=production --no-audit --no-fund
+    npm run build
+    
+  # Health checks
+  healthCheck:
+    enabled: true
+    path: /health
+    
+  # Auto-deploy settings
+  autoDeploy: true
+  branch: render-deployment

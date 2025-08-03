@@ -1,22 +1,45 @@
-yfinance>=0.2.18
-pandas>=1.5.0
-numpy>=1.24.0
-fastapi>=0.100.0
-uvicorn>=0.23.0
-python-multipart>=0.0.6
-requests>=2.31.0
-scikit-learn>=1.3.0
-xgboost>=1.7.0
-joblib>=1.3.0
+# Core framework - keep minimal for faster installs
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
 
-# Notification services
-python-telegram-bot>=20.0
-aiosmtplib>=3.0.0
-email-validator>=2.0.0
+# Essential dependencies only
+requests==2.31.0
+python-multipart==0.0.6
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
 
-# Scheduling and background tasks
-schedule>=1.2.0
+# Data processing - minimal versions
+pandas==2.1.3
+numpy==1.24.3
 
-# Additional utilities
-python-dotenv>=1.0.0
-pydantic>=2.0.0
+# Database
+sqlite3
+
+# Async support
+aiofiles==23.2.1
+
+# Environment
+python-dotenv==1.0.0
+
+# Logging
+structlog==23.2.0
+
+# HTTP client
+httpx==0.25.2
+
+# Validation
+pydantic==2.5.0
+
+# Timezone handling
+pytz==2023.3
+
+# Math and statistics
+scipy==1.11.4
+scikit-learn==1.3.2
+
+# Remove heavy dependencies that aren't essential:
+# - tensorflow (too heavy for free tier)
+# - torch (too heavy for free tier) 
+# - matplotlib (not needed for API)
+# - seaborn (not needed for API)
+# - jupyter (not needed for production)
