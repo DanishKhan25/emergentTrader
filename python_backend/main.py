@@ -261,6 +261,7 @@ async def generate_signals(request: SignalRequest):
 @app.post("/signals/generate")
 async def generate_signals_alt(request: SignalRequest):
     """Generate trading signals (alternative endpoint for frontend compatibility)"""
+
     try:
         result = api_handler.generate_signals(
             strategy=request.strategy,
