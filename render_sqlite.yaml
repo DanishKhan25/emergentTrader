@@ -1,0 +1,164 @@
+services:
+  # Frontend - Next.js Application
+  - type: web
+    name: emergenttrader-frontend
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          type: web
+          name: emergenttrader-backend
+          property: host
+      - key: NEXT_PUBLIC_WS_URL
+        fromService:
+          type: web
+          name: emergenttrader-backend
+          property: host
+    healthCheckPath: /
+    
+  # Backend - Python FastAPI Application with SQLite
+  - type: web
+    name: emergenttrader-backend
+    env: python
+    plan: free
+    buildCommand: |
+      cd python_backend &&
+      pip install -r requirements.txt &&
+      python migrate_to_production.py &&
+      python -c "import nltk; nltk.download('punkt')" || true
+    startCommand: cd python_backend && python main.py
+    envVars:
+      - key: PYTHON_ENV
+        value: production
+      - key: USE_SQLITE
+        value: true
+      - key: FRONTEND_URL
+        fromService:
+          type: web
+          name: emergenttrader-frontend
+          property: host
+      # Email Configuration
+      - key: EMAIL_HOST
+        value: smtp.gmail.com
+      - key: EMAIL_PORT
+        value: 587
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASSWORD
+        sync: false
+      - key: NOTIFICATION_EMAIL
+        sync: false
+      # Telegram Configuration
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
+      - key: TELEGRAM_CHANNEL_ID
+        sync: false
+    healthCheckPath: /health
+    
+  # Scheduled Signal Generation Service - Morning (9 AM IST = 3:30 AM UTC)
+  - type: cron
+    name: signal-generator-morning
+    env: python
+    schedule: "30 3 * * 1-5"  # 9 AM IST weekdays
+    buildCommand: |
+      cd python_backend &&
+      pip install -r requirements.txt
+    startCommand: cd python_backend && python scheduled_signal_generator.py --time=morning
+    envVars:
+      - key: PYTHON_ENV
+        value: production
+      - key: USE_SQLITE
+        value: true
+      # Email Configuration
+      - key: EMAIL_HOST
+        value: smtp.gmail.com
+      - key: EMAIL_PORT
+        value: 587
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASSWORD
+        sync: false
+      - key: NOTIFICATION_EMAIL
+        sync: false
+      # Telegram Configuration
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
+      - key: TELEGRAM_CHANNEL_ID
+        sync: false
+          
+  # Scheduled Signal Generation Service - Afternoon (2 PM IST = 8:30 AM UTC)
+  - type: cron
+    name: signal-generator-afternoon
+    env: python
+    schedule: "30 8 * * 1-5"  # 2 PM IST weekdays
+    buildCommand: |
+      cd python_backend &&
+      pip install -r requirements.txt
+    startCommand: cd python_backend && python scheduled_signal_generator.py --time=afternoon
+    envVars:
+      - key: PYTHON_ENV
+        value: production
+      - key: USE_SQLITE
+        value: true
+      # Email Configuration
+      - key: EMAIL_HOST
+        value: smtp.gmail.com
+      - key: EMAIL_PORT
+        value: 587
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASSWORD
+        sync: false
+      - key: NOTIFICATION_EMAIL
+        sync: false
+      # Telegram Configuration
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
+      - key: TELEGRAM_CHANNEL_ID
+        sync: false
+          
+  # Scheduled Signal Generation Service - Evening (6 PM IST = 12:30 PM UTC)
+  - type: cron
+    name: signal-generator-evening
+    env: python
+    schedule: "30 12 * * 1-5"  # 6 PM IST weekdays
+    buildCommand: |
+      cd python_backend &&
+      pip install -r requirements.txt
+    startCommand: cd python_backend && python scheduled_signal_generator.py --time=evening
+    envVars:
+      - key: PYTHON_ENV
+        value: production
+      - key: USE_SQLITE
+        value: true
+      # Email Configuration
+      - key: EMAIL_HOST
+        value: smtp.gmail.com
+      - key: EMAIL_PORT
+        value: 587
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASSWORD
+        sync: false
+      - key: NOTIFICATION_EMAIL
+        sync: false
+      # Telegram Configuration
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
+      - key: TELEGRAM_CHANNEL_ID
+        sync: false
+
+# No database section needed - using SQLite files
