@@ -59,14 +59,14 @@
         "tailwindcss-animate": "^1.0.7",
         "uuid": "^9.0.1",
         "vaul": "^1.1.2",
-        "zod": "^3.25.67"
-    },
-    "devDependencies": {
+        "zod": "^3.25.67",
         "autoprefixer": "^10.4.19",
-        "eslint": "^8",
-        "eslint-config-next": "14.2.30",
         "postcss": "^8",
         "tailwindcss": "^3.4.1"
+    },
+    "devDependencies": {
+        "eslint": "^8",
+        "eslint-config-next": "14.2.30"
     },
     "engines": {
         "node": ">=18.0.0",
