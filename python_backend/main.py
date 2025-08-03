@@ -209,17 +209,7 @@ async def add_position(position: dict):
         logger.error(f"Error adding position: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/portfolio")
-async def get_portfolio_root():
-    """Get portfolio data (root endpoint)"""
-    try:
-        result = api_handler.get_portfolio()
-        return result
-    except Exception as e:
-        logger.error(f"Error getting portfolio: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/portfolio/positions")
+@app.get("/api/portfolio/positions")
 async def get_portfolio_positions():
     """Get portfolio positions"""
     try:
@@ -229,7 +219,7 @@ async def get_portfolio_positions():
         logger.error(f"Error getting portfolio positions: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/portfolio/allocation")
+@app.get("/api/portfolio/allocation")
 async def get_portfolio_allocation():
     """Get portfolio allocation"""
     try:
@@ -239,7 +229,7 @@ async def get_portfolio_allocation():
         logger.error(f"Error getting portfolio allocation: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/strategies")
+@app.get("/api/strategies")
 async def get_strategies():
     """Get available trading strategies"""
     try:
@@ -256,17 +246,7 @@ async def get_strategies():
         logger.error(f"Error getting strategies: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/signals")
-async def get_signals_root():
-    """Get signals (root endpoint)"""
-    try:
-        result = api_handler.get_active_signals()
-        return result
-    except Exception as e:
-        logger.error(f"Error getting signals: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/signals/today")
+@app.get("/api/signals/today")
 async def get_signals_today():
     """Get today's signals"""
     try:
@@ -276,7 +256,7 @@ async def get_signals_today():
         logger.error(f"Error getting today's signals: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/signals/open")
+@app.get("/api/signals/open")
 async def get_signals_open():
     """Get open signals"""
     try:
@@ -286,7 +266,7 @@ async def get_signals_open():
         logger.error(f"Error getting open signals: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/performance")
+@app.get("/api/performance")
 async def get_performance():
     """Get performance data"""
     try:
@@ -304,7 +284,7 @@ async def get_performance():
         logger.error(f"Error getting performance: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/performance/summary")
+@app.get("/api/performance/summary")
 async def get_performance_summary(period: str = "30d"):
     """Get performance summary"""
     try:
@@ -322,7 +302,7 @@ async def get_performance_summary(period: str = "30d"):
         logger.error(f"Error getting performance summary: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/stocks/all")
+@app.get("/api/stocks/all")
 async def get_all_stocks():
     """Get all stocks"""
     try:
@@ -337,7 +317,7 @@ async def get_all_stocks():
         logger.error(f"Error getting all stocks: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/stocks/shariah")
+@app.get("/api/stocks/shariah")
 async def get_shariah_stocks():
     """Get Shariah-compliant stocks"""
     try:
