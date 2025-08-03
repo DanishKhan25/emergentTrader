@@ -1,67 +1,45 @@
-# Production requirements for EmergentTrader Backend with Telegram
-# Optimized for Render deployment
-
-# Core Framework
+# Core framework - keep minimal for faster installs
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
-pydantic==2.5.0
+
+# Essential dependencies only
+requests==2.31.0
+python-multipart==0.0.6
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+
+# Data processing - minimal versions
+pandas==2.1.3
+numpy==1.24.3
 
 # Database
 sqlite3
-sqlalchemy==2.0.23
 
-# Data Processing
-pandas==2.1.4
-numpy==1.25.2
-yfinance==0.2.28
+# Async support
+aiofiles==23.2.1
 
-# Machine Learning
-scikit-learn==1.3.2
-joblib==1.3.2
-xgboost==2.0.2
-
-# HTTP Requests & Telegram
-requests==2.31.0
-httpx==0.25.2
-aiohttp==3.9.1
-
-# Async Support
-asyncio
-asyncpg==0.29.0
-
-# Utilities
+# Environment
 python-dotenv==1.0.0
-python-multipart==0.0.6
-email-validator==2.1.0
 
-# Monitoring & Logging
+# Logging
 structlog==23.2.0
 
-# Security
-cryptography==41.0.8
-passlib[bcrypt]==1.7.4
-python-jose[cryptography]==3.3.0
+# HTTP client
+httpx==0.25.2
 
-# Email
-smtplib
-email-mime-multipart
-email-mime-text
+# Validation
+pydantic==2.5.0
 
-# Date/Time
-python-dateutil==2.8.2
+# Timezone handling
+pytz==2023.3
 
-# JSON handling
-orjson==3.9.10
+# Math and statistics
+scipy==1.11.4
+scikit-learn==1.3.2
 
-# WebSocket support
-websockets==12.0
-
-# Production optimizations
-gunicorn==21.2.0
-psutil==5.9.6
-
-# Optional: Redis for caching (if needed)
-redis==5.0.1
-
-# Optional: PostgreSQL support (if upgrading from SQLite)
-psycopg2-binary==2.9.9
+# Remove heavy dependencies that aren't essential:
+# - tensorflow (too heavy for free tier)
+# - torch (too heavy for free tier) 
+# - matplotlib (not needed for API)
+# - seaborn (not needed for API)
+# - jupyter (not needed for production)
