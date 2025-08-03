@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Scheduled Signal Generator for EmergentTrader
-Runs automated signal generation 3 times daily on Render
+Enhanced Scheduled Signal Generator with Telegram Notifications
+Runs automated signal generation 3 times daily with Telegram alerts
 """
 
 import os
@@ -22,6 +22,7 @@ from core.enhanced_signal_engine import EnhancedSignalEngine
 from core.ml_enhanced_signal_engine import MLEnhancedSignalEngine
 from services.notification_service import NotificationService
 from services.email_service import EmailService
+from services.telegram_service import TelegramService
 
 # Configure logging
 logging.basicConfig(
@@ -34,7 +35,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-class ScheduledSignalGenerator:
+class EnhancedScheduledSignalGenerator:
     def __init__(self, run_time="morning"):
         self.run_time = run_time
         self.api = EmergentTraderAPI()
@@ -42,6 +43,7 @@ class ScheduledSignalGenerator:
         self.ml_engine = MLEnhancedSignalEngine()
         self.notification_service = NotificationService()
         self.email_service = EmailService()
+        self.telegram_service = TelegramService()
         
         # Configure based on run time
         self.config = self.get_run_config(run_time)
@@ -55,7 +57,9 @@ class ScheduledSignalGenerator:
                 "strategies": ["multibagger", "momentum", "breakout"],
                 "min_confidence": 0.7,
                 "max_signals": 20,
-                "email_subject": "🌅 Morning Trading Signals - EmergentTrader"
+                "email_subject": "🌅 Morning Trading Signals - EmergentTrader",
+                "telegram_emoji": "🌅",
+                "description": "Pre-market analysis with high-growth potential stocks"
             },
             "afternoon": {
                 "name": "Midday Market Analysis",
@@ -63,7 +67,9 @@ class ScheduledSignalGenerator:
                 "strategies": ["swing_trading", "mean_reversion", "value_investing"],
                 "min_confidence": 0.75,
                 "max_signals": 15,
-                "email_subject": "☀️ Afternoon Market Update - EmergentTrader"
+                "email_subject": "☀️ Afternoon Market Update - EmergentTrader",
+                "telegram_emoji": "☀️",
+                "description": "Mid-session opportunities and value picks"
             },
             "evening": {
                 "name": "End of Day Review",
@@ -71,14 +77,19 @@ class ScheduledSignalGenerator:
                 "strategies": ["sector_rotation", "low_volatility", "fundamental_growth"],
                 "min_confidence": 0.8,
                 "max_signals": 10,
-                "email_subject": "🌆 Evening Market Summary - EmergentTrader"
+                "email_subject": "🌆 Evening Market Summary - EmergentTrader",
+                "telegram_emoji": "🌆",
+                "description": "Post-market analysis and tomorrow's opportunities"
             }
         }
         return configs.get(run_time, configs["morning"])
     
     async def run_full_scan(self):
-        """Run complete market scan and generate signals"""
+        """Run complete market scan and generate signals with Telegram notifications"""
         logger.info(f"Starting {self.config['name']} at {datetime.now()}")
+        
+        # Send scan start notification to Telegram
+        await self.send_scan_start_notification()
         
         try:
             # Step 1: Generate signals using multiple strategies
@@ -113,9 +124,9 @@ class ScheduledSignalGenerator:
             logger.info("Tracking signal progress...")
             await self.track_signal_progress()
             
-            # Step 6: Send notifications
+            # Step 6: Send notifications (Email + Telegram)
             logger.info("Sending notifications...")
-            await self.send_notifications(final_signals)
+            await self.send_all_notifications(final_signals)
             
             # Step 7: Generate report
             report = self.generate_run_report(final_signals, saved_count)
@@ -125,8 +136,26 @@ class ScheduledSignalGenerator:
             
         except Exception as e:
             logger.error(f"Error in scheduled scan: {e}")
-            await self.send_error_notification(str(e))
+            await self.send_error_notifications(str(e))
             raise
+    
+    async def send_scan_start_notification(self):
+        """Send notification that scan is starting"""
+        try:
+            if self.telegram_service.enabled:
+                start_message = f"{self.config['telegram_emoji']} *{self.config['name']} Starting*\n\n"
+                start_message += f"⏰ Time: {datetime.now().strftime('%H:%M IST')}\n"
+                start_message += f"🔍 Strategies: {', '.join(self.config['strategies'])}\n"
+                start_message += f"📊 {self.config['description']}\n\n"
+                start_message += f"⏳ Scanning market... Please wait for results."
+                
+                await self.telegram_service.send_message(
+                    self.telegram_service.chat_id, 
+                    start_message
+                )
+                
+        except Exception as e:
+            logger.error(f"Error sending scan start notification: {e}")
     
     async def generate_strategy_signals(self, strategy_name):
         """Generate signals for a specific strategy"""
@@ -223,7 +252,7 @@ class ScheduledSignalGenerator:
         return saved_count
     
     async def track_signal_progress(self):
-        """Track progress of existing signals"""
+        """Track progress of existing signals and send updates"""
         try:
             # Get active signals from last 30 days
             active_signals = await asyncio.to_thread(
@@ -238,6 +267,8 @@ class ScheduledSignalGenerator:
             signals = active_signals.get("signals", [])
             logger.info(f"Tracking progress for {len(signals)} active signals")
             
+            significant_updates = []
+            
             # Update each signal's progress
             for signal in signals:
                 try:
@@ -248,6 +279,13 @@ class ScheduledSignalGenerator:
                         # Calculate performance metrics
                         performance = self.calculate_signal_performance(signal, current_data)
                         
+                        # Check for significant updates (target hit, stop loss, etc.)
+                        if self.is_significant_update(signal, performance):
+                            significant_updates.append({
+                                **signal,
+                                **performance
+                            })
+                        
                         # Update signal in database
                         await asyncio.to_thread(
                             self.api.update_signal_progress,
@@ -257,9 +295,29 @@ class ScheduledSignalGenerator:
                         
                 except Exception as e:
                     logger.error(f"Error tracking signal {signal.get('symbol')}: {e}")
+            
+            # Send Telegram notifications for significant updates
+            if significant_updates:
+                await self.send_signal_updates_notification(significant_updates)
                     
         except Exception as e:
             logger.error(f"Error in signal tracking: {e}")
+    
+    def is_significant_update(self, signal, performance):
+        """Check if signal update is significant enough to notify"""
+        old_status = signal.get("status", "active")
+        new_status = performance.get("status", "active")
+        
+        # Status changed
+        if old_status != new_status:
+            return True
+        
+        # Large price movement (>5%)
+        returns = performance.get("returns", 0)
+        if abs(returns) > 5:
+            return True
+        
+        return False
     
     async def get_current_market_data(self, symbol):
         """Get current market data for a symbol"""
@@ -312,8 +370,8 @@ class ScheduledSignalGenerator:
             logger.error(f"Error calculating performance: {e}")
             return {}
     
-    async def send_notifications(self, signals):
-        """Send notifications about new signals"""
+    async def send_all_notifications(self, signals):
+        """Send both email and Telegram notifications"""
         try:
             if not signals:
                 logger.info("No signals to notify about")
@@ -324,18 +382,77 @@ class ScheduledSignalGenerator:
                 "run_type": self.run_time,
                 "run_name": self.config["name"],
                 "signal_count": len(signals),
-                "signals": signals[:5],  # Top 5 signals
-                "timestamp": datetime.now().isoformat()
+                "signals": signals,
+                "timestamp": datetime.now().isoformat(),
+                "strategies_used": self.config["strategies"],
+                "description": self.config["description"]
             }
             
             # Send email notification
             await self.send_email_notification(notification_data)
+            
+            # Send Telegram notification
+            await self.send_telegram_notification(notification_data)
             
             # Send in-app notifications
             await self.send_app_notifications(notification_data)
             
         except Exception as e:
             logger.error(f"Error sending notifications: {e}")
+    
+    async def send_telegram_notification(self, data):
+        """Send Telegram notification"""
+        try:
+            if self.telegram_service.enabled:
+                success = await self.telegram_service.send_signal_notification(data)
+                if success:
+                    logger.info("Telegram notification sent successfully")
+                else:
+                    logger.error("Failed to send Telegram notification")
+            else:
+                logger.info("Telegram service not enabled")
+                
+        except Exception as e:
+            logger.error(f"Error sending Telegram notification: {e}")
+    
+    async def send_signal_updates_notification(self, updates):
+        """Send Telegram notification for signal updates"""
+        try:
+            if not self.telegram_service.enabled or not updates:
+                return
+            
+            message = f"📊 *Signal Updates*\n"
+            message += f"⏰ {datetime.now().strftime('%H:%M IST')}\n\n"
+            
+            for update in updates[:5]:  # Limit to 5 updates
+                symbol = update.get("symbol", "N/A")
+                status = update.get("status", "unknown")
+                returns = update.get("returns", 0)
+                
+                status_emojis = {
+                    "target_hit": "🎯",
+                    "stop_loss_hit": "🛑",
+                    "active": "⏳"
+                }
+                
+                status_emoji = status_emojis.get(status, "📊")
+                returns_emoji = "🟢" if returns > 0 else "🔴" if returns < 0 else "⚪"
+                
+                message += f"{status_emoji} *{symbol}*\n"
+                message += f"   {returns_emoji} {returns:+.1f}% | {status.replace('_', ' ').title()}\n\n"
+            
+            if len(updates) > 5:
+                message += f"➕ {len(updates) - 5} more updates...\n\n"
+            
+            message += f"🌐 [View Dashboard](https://emergenttrader.onrender.com/signals)"
+            
+            await self.telegram_service.send_message(
+                self.telegram_service.chat_id,
+                message
+            )
+            
+        except Exception as e:
+            logger.error(f"Error sending signal updates notification: {e}")
     
     async def send_email_notification(self, data):
         """Send email notification"""
@@ -367,6 +484,7 @@ class ScheduledSignalGenerator:
             <h2 style="color: #2563eb;">{data['run_name']}</h2>
             <p><strong>Generated:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
             <p><strong>Total Signals:</strong> {data['signal_count']}</p>
+            <p><strong>Description:</strong> {data['description']}</p>
             
             <h3 style="color: #059669;">Top Signals:</h3>
             <table style="border-collapse: collapse; width: 100%;">
@@ -376,17 +494,25 @@ class ScheduledSignalGenerator:
                     <th style="border: 1px solid #d1d5db; padding: 8px;">Confidence</th>
                     <th style="border: 1px solid #d1d5db; padding: 8px;">Entry Price</th>
                     <th style="border: 1px solid #d1d5db; padding: 8px;">Target</th>
+                    <th style="border: 1px solid #d1d5db; padding: 8px;">Potential</th>
                 </tr>
         """
         
         for signal in data["signals"]:
+            entry_price = signal.get('entry_price', 0)
+            target_price = signal.get('target_price', 0)
+            potential = 0
+            if entry_price and target_price:
+                potential = ((target_price - entry_price) / entry_price) * 100
+            
             html += f"""
                 <tr>
                     <td style="border: 1px solid #d1d5db; padding: 8px;">{signal.get('symbol', 'N/A')}</td>
                     <td style="border: 1px solid #d1d5db; padding: 8px;">{signal.get('strategy', 'N/A')}</td>
-                    <td style="border: 1px solid #d1d5db; padding: 8px;">{signal.get('confidence', 0):.2f}</td>
-                    <td style="border: 1px solid #d1d5db; padding: 8px;">₹{signal.get('entry_price', 0):.2f}</td>
-                    <td style="border: 1px solid #d1d5db; padding: 8px;">₹{signal.get('target_price', 0):.2f}</td>
+                    <td style="border: 1px solid #d1d5db; padding: 8px;">{signal.get('confidence', 0):.1%}</td>
+                    <td style="border: 1px solid #d1d5db; padding: 8px;">₹{entry_price:.2f}</td>
+                    <td style="border: 1px solid #d1d5db; padding: 8px;">₹{target_price:.2f}</td>
+                    <td style="border: 1px solid #d1d5db; padding: 8px;">{potential:+.1f}%</td>
                 </tr>
             """
         
@@ -402,7 +528,7 @@ class ScheduledSignalGenerator:
             
             <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
                 This is an automated message from EmergentTrader. 
-                <br>Generated by scheduled signal scanner.
+                <br>Generated by scheduled signal scanner with Telegram notifications.
             </p>
         </body>
         </html>
@@ -431,9 +557,16 @@ class ScheduledSignalGenerator:
         except Exception as e:
             logger.error(f"Error sending in-app notification: {e}")
     
-    async def send_error_notification(self, error_message):
-        """Send error notification"""
+    async def send_error_notifications(self, error_message):
+        """Send error notifications via email and Telegram"""
         try:
+            error_data = {
+                "run_type": self.run_time,
+                "error": error_message,
+                "timestamp": datetime.now().isoformat()
+            }
+            
+            # Send email error notification
             subject = f"🚨 EmergentTrader {self.config['name']} - Error Alert"
             
             html_content = f"""
@@ -459,8 +592,12 @@ class ScheduledSignalGenerator:
                 html_content
             )
             
+            # Send Telegram error notification
+            if self.telegram_service.enabled:
+                await self.telegram_service.send_error_notification(error_data)
+            
         except Exception as e:
-            logger.error(f"Error sending error notification: {e}")
+            logger.error(f"Error sending error notifications: {e}")
     
     def generate_run_report(self, signals, saved_count):
         """Generate run report"""
@@ -472,6 +609,7 @@ class ScheduledSignalGenerator:
             "signals_saved": saved_count,
             "strategies_used": self.config["strategies"],
             "min_confidence": self.config["min_confidence"],
+            "telegram_enabled": self.telegram_service.enabled,
             "success": True
         }
         
@@ -487,25 +625,25 @@ class ScheduledSignalGenerator:
 
 async def main():
     """Main function for scheduled execution"""
-    parser = argparse.ArgumentParser(description='Scheduled Signal Generator')
+    parser = argparse.ArgumentParser(description='Enhanced Scheduled Signal Generator with Telegram')
     parser.add_argument('--time', choices=['morning', 'afternoon', 'evening'], 
                        default='morning', help='Time of day for signal generation')
     
     args = parser.parse_args()
     
-    logger.info(f"Starting scheduled signal generation for {args.time}")
+    logger.info(f"Starting enhanced scheduled signal generation for {args.time}")
     
     try:
-        generator = ScheduledSignalGenerator(args.time)
+        generator = EnhancedScheduledSignalGenerator(args.time)
         report = await generator.run_full_scan()
         
-        logger.info("Scheduled signal generation completed successfully")
+        logger.info("Enhanced scheduled signal generation completed successfully")
         logger.info(f"Report: {json.dumps(report, indent=2)}")
         
         return 0
         
     except Exception as e:
-        logger.error(f"Scheduled signal generation failed: {e}")
+        logger.error(f"Enhanced scheduled signal generation failed: {e}")
         return 1
 
 if __name__ == "__main__":
