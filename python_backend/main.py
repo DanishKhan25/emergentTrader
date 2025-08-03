@@ -209,6 +209,148 @@ async def add_position(position: dict):
         logger.error(f"Error adding position: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/portfolio")
+async def get_portfolio_root():
+    """Get portfolio data (root endpoint)"""
+    try:
+        result = api_handler.get_portfolio()
+        return result
+    except Exception as e:
+        logger.error(f"Error getting portfolio: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/portfolio/positions")
+async def get_portfolio_positions():
+    """Get portfolio positions"""
+    try:
+        result = api_handler.get_portfolio()
+        return result.get('positions', [])
+    except Exception as e:
+        logger.error(f"Error getting portfolio positions: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/portfolio/allocation")
+async def get_portfolio_allocation():
+    """Get portfolio allocation"""
+    try:
+        result = api_handler.get_portfolio()
+        return result.get('allocation', {})
+    except Exception as e:
+        logger.error(f"Error getting portfolio allocation: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/strategies")
+async def get_strategies():
+    """Get available trading strategies"""
+    try:
+        strategies = [
+            {"id": "multibagger", "name": "Multibagger", "description": "High-growth potential stocks"},
+            {"id": "momentum", "name": "Momentum", "description": "Stocks with strong price momentum"},
+            {"id": "breakout", "name": "Breakout", "description": "Stocks breaking resistance levels"},
+            {"id": "swing_trading", "name": "Swing Trading", "description": "Short to medium-term opportunities"},
+            {"id": "mean_reversion", "name": "Mean Reversion", "description": "Oversold stocks likely to bounce"},
+            {"id": "value_investing", "name": "Value Investing", "description": "Undervalued stocks with strong fundamentals"}
+        ]
+        return {"success": True, "strategies": strategies}
+    except Exception as e:
+        logger.error(f"Error getting strategies: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/signals")
+async def get_signals_root():
+    """Get signals (root endpoint)"""
+    try:
+        result = api_handler.get_active_signals()
+        return result
+    except Exception as e:
+        logger.error(f"Error getting signals: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/signals/today")
+async def get_signals_today():
+    """Get today's signals"""
+    try:
+        result = api_handler.get_active_signals(days=1)
+        return result
+    except Exception as e:
+        logger.error(f"Error getting today's signals: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/signals/open")
+async def get_signals_open():
+    """Get open signals"""
+    try:
+        result = api_handler.get_active_signals()
+        return result
+    except Exception as e:
+        logger.error(f"Error getting open signals: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/performance")
+async def get_performance():
+    """Get performance data"""
+    try:
+        # Mock performance data
+        performance = {
+            "total_return": 15.2,
+            "daily_return": 0.8,
+            "win_rate": 68.5,
+            "total_trades": 45,
+            "winning_trades": 31,
+            "losing_trades": 14
+        }
+        return {"success": True, "performance": performance}
+    except Exception as e:
+        logger.error(f"Error getting performance: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/performance/summary")
+async def get_performance_summary(period: str = "30d"):
+    """Get performance summary"""
+    try:
+        # Mock performance summary
+        summary = {
+            "period": period,
+            "total_return": 15.2,
+            "sharpe_ratio": 1.8,
+            "max_drawdown": -5.2,
+            "volatility": 12.5,
+            "trades_count": 45
+        }
+        return {"success": True, "summary": summary}
+    except Exception as e:
+        logger.error(f"Error getting performance summary: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/stocks/all")
+async def get_all_stocks():
+    """Get all stocks"""
+    try:
+        # Mock stock data
+        stocks = [
+            {"symbol": "RELIANCE", "name": "Reliance Industries", "price": 2450.50, "change": 1.2},
+            {"symbol": "TCS", "name": "Tata Consultancy Services", "price": 3650.75, "change": -0.8},
+            {"symbol": "INFY", "name": "Infosys", "price": 1580.25, "change": 2.1}
+        ]
+        return {"success": True, "stocks": stocks}
+    except Exception as e:
+        logger.error(f"Error getting all stocks: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/stocks/shariah")
+async def get_shariah_stocks():
+    """Get Shariah-compliant stocks"""
+    try:
+        # Mock Shariah stock data
+        stocks = [
+            {"symbol": "TCS", "name": "Tata Consultancy Services", "price": 3650.75, "change": -0.8, "shariah_compliant": True},
+            {"symbol": "INFY", "name": "Infosys", "price": 1580.25, "change": 2.1, "shariah_compliant": True}
+        ]
+        return {"success": True, "stocks": stocks}
+    except Exception as e:
+        logger.error(f"Error getting Shariah stocks: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Market data endpoints
 @app.get("/api/market/data/{symbol}")
 async def get_market_data(symbol: str):

@@ -77,6 +77,24 @@ class EmergentTraderAPI:
             logger.error(f"Error initializing engines: {str(e)}")
             self.signal_engine = None
 
+    def test_database_connection(self):
+        """Test database connection"""
+        try:
+            if self.use_database and DATABASE_AVAILABLE:
+                # Test database connection
+                import sqlite3
+                conn = sqlite3.connect(DATABASE_PATH)
+                cursor = conn.cursor()
+                cursor.execute("SELECT 1")
+                conn.close()
+                return True
+            else:
+                # Using in-memory storage
+                return True
+        except Exception as e:
+            logger.error(f"Database connection test failed: {e}")
+            return False
+
     def add_position(self, position_data: Dict) -> Dict:
         """Add a new position to portfolio"""
         try:
